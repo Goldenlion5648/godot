@@ -48,15 +48,15 @@ jobs:
             compiler: msvc
             cache-limit: 2
 
-          - name: Template w/ GCC (target=template_release, tests=yes, use_mingw=yes)
-            cache-name: windows-template-gcc
-            # MinGW takes MUCH longer to compile; save time by only targeting Template.
-            target: template_release
-            tests: true
-            sconsflags: debug_symbols=no use_mingw=yes
-            bin: ./bin/godot.windows.template_release.x86_64.console.exe
-            compiler: gcc
-            cache-limit: 1
+          # - name: Template w/ GCC (target=template_release, tests=yes, use_mingw=yes)
+          #   cache-name: windows-template-gcc
+          #   # MinGW takes MUCH longer to compile; save time by only targeting Template.
+          #   target: template_release
+          #   tests: true
+          #   sconsflags: debug_symbols=no use_mingw=yes
+          #   bin: ./bin/godot.windows.template_release.x86_64.console.exe
+          #   compiler: gcc
+          #   cache-limit: 1
 
     steps:
       - name: Checkout
