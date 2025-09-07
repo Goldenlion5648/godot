@@ -330,7 +330,7 @@ public:
 		const int64_t &b = *VariantGetInternalPtr<int64_t>::get_ptr(&p_right);
 		if (b == 0) {
 			r_valid = false;
-			*r_ret = "Division by zero error";
+			*r_ret = "Modulo by zero error";
 			return;
 		}
 		*r_ret = Math::posmod(a, b);
