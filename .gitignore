@@ -23,7 +23,10 @@
 ###########################
 
 /custom.py
+godot.gdkey
+.scons_env*
 misc/hooks/pre-commit-custom-*
+my_notes_and_commands_to_run.txt
 
 #############################
 ### Godot generated files ###

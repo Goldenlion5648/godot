@@ -323,6 +323,30 @@ public:
 };
 
 template <>
+class OperatorEvaluatorModNZ<int64_t, int64_t, int64_t> {
+public:
+	static void evaluate(const Variant &p_left, const Variant &p_right, Variant *r_ret, bool &r_valid) {
+		const int64_t &a = *VariantGetInternalPtr<int64_t>::get_ptr(&p_left);
+		const int64_t &b = *VariantGetInternalPtr<int64_t>::get_ptr(&p_right);
+		if (b == 0) {
+			r_valid = false;
+			*r_ret = "Division by zero error";
+			return;
+		}
+		*r_ret = Math::posmod(a, b);
+		r_valid = true;
+	}
+	static void validated_evaluate(const Variant *left, const Variant *right, Variant *r_ret) {
+		VariantTypeChanger<int64_t>::change(r_ret);
+		*VariantGetInternalPtr<int64_t>::get_ptr(r_ret) = Math::posmod(*VariantGetInternalPtr<int64_t>::get_ptr(left), *VariantGetInternalPtr<int64_t>::get_ptr(right));
+	}
+	static void ptr_evaluate(const void *left, const void *right, void *r_ret) {
+		PtrToArg<int64_t>::encode(Math::posmod(PtrToArg<int64_t>::convert(left), PtrToArg<int64_t>::convert(right)), r_ret);
+	}
+	static Variant::Type get_return_type() { return GetTypeInfo<int64_t>::VARIANT_TYPE; }
+};
+
+template <>
 class OperatorEvaluatorModNZ<Vector3i, Vector3i, Vector3i> {
 public:
 	static void evaluate(const Variant &p_left, const Variant &p_right, Variant *r_ret, bool &r_valid) {
