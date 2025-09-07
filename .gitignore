@@ -22,7 +22,6 @@
 ### Build configuration ###
 ###########################
 
-/custom.py
 godot.gdkey
 .scons_env*
 misc/hooks/pre-commit-custom-*
