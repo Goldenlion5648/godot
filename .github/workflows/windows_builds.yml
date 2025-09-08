@@ -98,6 +98,8 @@ jobs:
           target: ${{ matrix.target }}
           tests: ${{ matrix.tests }}
           scons-cache-limit: ${{ matrix.cache-limit }}
+        env:
+          ENCRYPT: ${{ secrets.ENCRYPT }}
 
       - name: Save Godot build cache
         uses: ./.github/actions/godot-cache-save
