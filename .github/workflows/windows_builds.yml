@@ -25,8 +25,8 @@ jobs:
             target: editor
             tests: true
             # Skip debug symbols, they're way too big with MSVC.
-            sconsflags: debug_symbols=no vsproj=yes vsproj_gen_only=no windows_subsystem=console disable_3d=no
-            bin: ./bin/godot.windows.editor.x86_64.exe
+            sconsflags: debug_symbols=no vsproj=yes vsproj_gen_only=no disable_3d=no
+            bin: ./bin/godot_custom.windows.editor.x86_64.exe
             compiler: msvc
             cache-limit: 2
 
@@ -34,8 +34,8 @@ jobs:
             cache-name: windows-editor-clang
             target: editor
             tests: true
-            sconsflags: debug_symbols=no windows_subsystem=console use_llvm=yes
-            bin: ./bin/godot.windows.editor.x86_64.llvm.exe
+            sconsflags: debug_symbols=no use_llvm=yes
+            bin: ./bin/godot_think_custom.windows.editor.x86_64.llvm.exe
             compiler: clang
             cache-limit: 1
 
