@@ -1,6 +1,9 @@
 name: 🏁 Windows Builds
 on:
   workflow_call:
+    secrets:
+        ENCRYPT:
+          required: true
 
 # Global Settings
 # SCONS_CACHE for windows must be set in the build environment

@@ -39,6 +39,8 @@ jobs:
     name: 🏁 Windows
     needs: static-checks
     uses: ./.github/workflows/windows_builds.yml
+    secrets: 
+      ENCRYPT: "${{ secrets.ENCRYPT }}"
 
   # web-build:
   #   name: 🌐 Web
