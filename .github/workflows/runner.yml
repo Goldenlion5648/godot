@@ -25,10 +25,10 @@ jobs:
   #   needs: static-checks
   #   uses: ./.github/workflows/ios_builds.yml
 
-  # linux-build:
-  #   name: 🐧 Linux
-  #   needs: static-checks
-  #   uses: ./.github/workflows/linux_builds.yml
+  linux-build:
+    name: 🐧 Linux
+    needs: static-checks
+    uses: ./.github/workflows/linux_builds.yml
 
   # macos-build:
   #   name: 🍎 macOS
