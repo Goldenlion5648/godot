@@ -18,6 +18,9 @@
 # - Visual Studio specific
 # - OS specific
 
+##MINE:
+out.temp
+
 ###########################
 ### Build configuration ###
 ###########################
