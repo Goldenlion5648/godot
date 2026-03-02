@@ -544,6 +544,11 @@ void ExtendGDScriptParser::parse_function_symbol(const GDScriptParser::FunctionN
 				node_stack.push_back(while_node->loop);
 			} break;
 
+			case GDScriptParser::TypeNode::DEFER: {
+				GDScriptParser::DeferNode *defer_node = (GDScriptParser::DeferNode *)node;
+				node_stack.push_back(defer_node->to_defer);
+			} break;
+
 			case GDScriptParser::TypeNode::MATCH: {
 				GDScriptParser::MatchNode *match_node = (GDScriptParser::MatchNode *)node;
 				for (GDScriptParser::MatchBranchNode *branch_node : match_node->branches) {

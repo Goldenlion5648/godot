@@ -89,6 +89,7 @@ class GDScriptAnalyzer {
 	void resolve_if(GDScriptParser::IfNode *p_if);
 	void resolve_for(GDScriptParser::ForNode *p_for);
 	void resolve_while(GDScriptParser::WhileNode *p_while);
+	void resolve_defer(GDScriptParser::DeferNode *p_defer);
 	void resolve_assert(GDScriptParser::AssertNode *p_assert);
 	void resolve_match(GDScriptParser::MatchNode *p_match);
 	void resolve_match_branch(GDScriptParser::MatchBranchNode *p_match_branch, GDScriptParser::ExpressionNode *p_match_test);

@@ -1614,6 +1614,9 @@ void GDScriptAnalyzer::resolve_node(GDScriptParser::Node *p_node, bool p_is_root
 		case GDScriptParser::Node::WHILE:
 			resolve_while(static_cast<GDScriptParser::WhileNode *>(p_node));
 			break;
+		case GDScriptParser::Node::DEFER:
+			resolve_defer(static_cast<GDScriptParser::DeferNode *>(p_node));
+			break;
 		case GDScriptParser::Node::ANNOTATION:
 			resolve_annotation(static_cast<GDScriptParser::AnnotationNode *>(p_node));
 			break;
@@ -2382,6 +2385,11 @@ void GDScriptAnalyzer::resolve_while(GDScriptParser::WhileNode *p_while) {
 	p_while->set_datatype(p_while->loop->get_datatype());
 }
 
+void GDScriptAnalyzer::resolve_defer(GDScriptParser::DeferNode *p_defer) {
+	resolve_suite(p_defer->to_defer);
+	p_defer->set_datatype(p_defer->to_defer->get_datatype());
+}
+
 void GDScriptAnalyzer::resolve_assert(GDScriptParser::AssertNode *p_assert) {
 	reduce_expression(p_assert->condition);
 	if (p_assert->message != nullptr) {
@@ -2680,6 +2688,7 @@ void GDScriptAnalyzer::reduce_expression(GDScriptParser::ExpressionNode *p_expre
 		case GDScriptParser::Node::TYPE:
 		case GDScriptParser::Node::VARIABLE:
 		case GDScriptParser::Node::WHILE:
+		case GDScriptParser::Node::DEFER:
 			ERR_FAIL_MSG("Reaching unreachable case");
 	}
 

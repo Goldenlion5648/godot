@@ -2605,6 +2605,7 @@ Vector<String> GDScriptLanguage::get_reserved_words() const {
 		"return",
 		"when",
 		"while",
+		"defer",
 		// Declarations.
 		"class",
 		"class_name",

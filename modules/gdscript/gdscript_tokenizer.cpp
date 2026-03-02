@@ -94,6 +94,7 @@ static const char *token_names[] = {
 	"else", // ELSE,
 	"for", // FOR,
 	"while", // WHILE,
+	"defer", // WHILE,
 	"break", // BREAK,
 	"continue", // CONTINUE,
 	"pass", // PASS,
@@ -533,6 +534,7 @@ GDScriptTokenizer::Token GDScriptTokenizerText::annotation() {
 	KEYWORD("void", Token::TK_VOID) \
 	KEYWORD_GROUP('w') \
 	KEYWORD("while", Token::WHILE) \
+	KEYWORD("defer", Token::DEFER) \
 	KEYWORD("when", Token::WHEN) \
 	KEYWORD_GROUP('y') \
 	KEYWORD("yield", Token::YIELD) \

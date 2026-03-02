@@ -99,6 +99,7 @@ public:
 			ELSE,
 			FOR,
 			WHILE,
+			DEFER,
 			BREAK,
 			CONTINUE,
 			PASS,

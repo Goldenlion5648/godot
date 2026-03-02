@@ -337,6 +337,7 @@ public:
 			UNARY_OPERATOR,
 			VARIABLE,
 			WHILE,
+			DEFER,
 		};
 
 		Type type = NONE;
@@ -1288,6 +1289,14 @@ public:
 		}
 	};
 
+	struct DeferNode : public Node {
+		SuiteNode *to_defer = nullptr;
+
+		DeferNode() {
+			type = DEFER;
+		}
+	};
+
 	enum CompletionType {
 		COMPLETION_NONE,
 		COMPLETION_ANNOTATION, // Annotation (following @).
@@ -1584,6 +1593,7 @@ private:
 	MatchBranchNode *parse_match_branch();
 	PatternNode *parse_match_pattern(PatternNode *p_root_pattern = nullptr);
 	WhileNode *parse_while();
+	DeferNode *parse_defer();
 	// Expressions.
 	ExpressionNode *parse_expression(bool p_can_assign, bool p_stop_on_assign = false);
 	ExpressionNode *parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign = false);
@@ -1708,6 +1718,7 @@ public:
 		void print_unary_op(UnaryOpNode *p_unary_op);
 		void print_variable(VariableNode *p_variable);
 		void print_while(WhileNode *p_while);
+		void print_defer(DeferNode *p_defer);
 
 	public:
 		void print_tree(const GDScriptParser &p_parser);

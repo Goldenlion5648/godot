@@ -2059,6 +2059,10 @@ GDScriptParser::Node *GDScriptParser::parse_statement() {
 			advance();
 			result = parse_while();
 			break;
+		case GDScriptTokenizer::Token::DEFER:
+			advance();
+			result = parse_defer();
+			break;
 		case GDScriptTokenizer::Token::MATCH:
 			advance();
 			result = parse_match();
@@ -2729,6 +2733,32 @@ GDScriptParser::WhileNode *GDScriptParser::parse_while() {
 	can_continue = could_continue;
 
 	return n_while;
+}
+
+GDScriptParser::DeferNode *GDScriptParser::parse_defer() {
+	DeferNode *n_defer = alloc_node<DeferNode>();
+	//TODO: if we allow "defer if", then parse it here
+
+	consume(GDScriptTokenizer::Token::COLON, R"(Expected ":" after "defer" keyword.)");
+
+	// Save break/continue state.
+	bool could_break = can_break;
+	bool could_continue = can_continue;
+
+	// Allow break/continue.
+	can_break = true;
+	can_continue = false;
+
+	SuiteNode *suite = alloc_node<SuiteNode>();
+	suite->is_in_loop = false;
+	n_defer->to_defer = parse_suite(R"("defer" block)", suite);
+	complete_extents(n_defer);
+
+	// Reset break/continue state.
+	can_break = could_break;
+	can_continue = could_continue;
+
+	return n_defer;
 }
 
 GDScriptParser::ExpressionNode *GDScriptParser::parse_precedence(Precedence p_precedence, bool p_can_assign, bool p_stop_on_assign) {
@@ -4284,6 +4314,7 @@ GDScriptParser::ParseRule *GDScriptParser::get_rule(GDScriptTokenizer::Token::Ty
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // ELSE,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // FOR,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // WHILE,
+		{ nullptr,                                          nullptr,                                        PREC_NONE }, // DEFER,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // BREAK,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // CONTINUE,
 		{ nullptr,                                          nullptr,                                        PREC_NONE }, // PASS,
@@ -5133,6 +5164,7 @@ bool GDScriptParser::warning_ignore_annotation(AnnotationNode *p_annotation, Nod
 				SIMPLE_CASE(Node::IF, IfNode, condition)
 				SIMPLE_CASE(Node::MATCH, MatchNode, test)
 				SIMPLE_CASE(Node::WHILE, WhileNode, condition)
+				SIMPLE_CASE(Node::DEFER, DeferNode, to_defer)
 #undef SIMPLE_CASE
 
 				case Node::CLASS: {
@@ -6330,6 +6362,9 @@ void GDScriptParser::TreePrinter::print_statement(Node *p_statement) {
 		case Node::WHILE:
 			print_while(static_cast<WhileNode *>(p_statement));
 			break;
+		case Node::DEFER:
+			print_defer(static_cast<DeferNode *>(p_statement));
+			break;
 		case Node::MATCH:
 			print_match(static_cast<MatchNode *>(p_statement));
 			break;
@@ -6500,6 +6535,15 @@ void GDScriptParser::TreePrinter::print_while(WhileNode *p_while) {
 
 	increase_indent();
 	print_suite(p_while->loop);
+	decrease_indent();
+}
+
+void GDScriptParser::TreePrinter::print_defer(DeferNode *p_defer) {
+	push_text("Defer ");
+	push_line(" :");
+
+	increase_indent();
+	print_suite(p_defer->to_defer);
 	decrease_indent();
 }
 
