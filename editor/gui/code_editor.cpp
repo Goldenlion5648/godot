@@ -1034,15 +1034,12 @@ void CodeTextEditor::_complete_request() {
 		code_complete_func(code_complete_ud, ctext, &entries, forced);
 	}
 
-	entries.push_back(ScriptLanguage::CodeCompletionOption{
-			"testing_string",
-			ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT });
-	entries.push_back(ScriptLanguage::CodeCompletionOption{
-			"more",
-			ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT });
-	entries.push_back(ScriptLanguage::CodeCompletionOption{
-			"completion",
-			ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT });
+	Vector<String> completions = EDITOR_GET("text_editor/completion/snippets");
+	for (const String &completion : completions) {
+		entries.push_back(ScriptLanguage::CodeCompletionOption{
+				completion,
+				ScriptLanguage::CODE_COMPLETION_KIND_PLAIN_TEXT });
+	}
 
 	for (const ScriptLanguage::CodeCompletionOption &e : entries) {
 		Color font_color = completion_font_color;
