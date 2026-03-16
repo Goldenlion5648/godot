@@ -134,6 +134,7 @@ protected:
 		BOOKMARK_REMOVE_ALL,
 
 		BASE_ENUM_COUNT,
+		ERROR_GOTO_NEXT,
 	};
 
 	class EditMenus : public EditMenusBase {
