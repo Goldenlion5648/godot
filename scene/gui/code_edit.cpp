@@ -1302,6 +1302,19 @@ void CodeEdit::_new_line(bool p_split_current_line, bool p_above) {
 	begin_complex_operation();
 	begin_multicaret_edit();
 
+	if (p_above) {
+		// When not splitting the line, we need to factor in indentation from the end of the current line.
+
+		// Currently does not work properly with multiple carets, but neither does the default "enter" key.
+		for (int i = get_caret_count() - 1; i >= 0; i--) {
+			const int cl = get_caret_line(i);
+			set_caret_line(cl - 1, false, true, -1, i);
+			set_caret_column(get_line(get_caret_line(i)).length(), i == 0, i);
+			_new_line(false, false);
+		}
+		return;
+	}
+
 	for (int i = 0; i < get_caret_count(); i++) {
 		if (multicaret_edit_ignore_caret(i)) {
 			continue;
