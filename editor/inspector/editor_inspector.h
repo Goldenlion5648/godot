@@ -809,6 +809,7 @@ private:
 	//
 
 	LineEdit *search_box = nullptr;
+	String old_filter_text;
 	bool show_standard_categories = false;
 	bool show_custom_categories = false;
 	int category_color_level = -1;
@@ -970,6 +971,9 @@ public:
 	bool is_using_folding();
 
 	void collapse_all_folding();
+	HashMap<String, bool> was_visible_before;
+	void save_folded_states_before_filter();
+	void restore_folded_states();
 	void expand_all_folding();
 	void expand_revertable();
 
