@@ -2722,6 +2722,7 @@ void CodeEdit::confirm_code_completion(bool p_replace) {
 			remove_text(caret_line, get_caret_column(i) - code_completion_base.length(), caret_line, get_caret_column(i));
 
 			// Merge with text.
+			starting_position_of_snippet_insert = get_caret_column(i);
 			insert_text_at_caret(insert_text.substr(0, code_completion_base.length()), i);
 			set_caret_column(caret_col, false, i);
 			insert_text_at_caret(insert_text.substr(matching_chars), i);
