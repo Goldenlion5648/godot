@@ -35,6 +35,8 @@
 #include "core/object/class_db.h"
 #include "core/os/keyboard.h"
 #include "core/string/translation_server.h"
+#include "editor/docks/scene_tree_dock.h"
+#include "editor/editor_data.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
 
@@ -62,6 +64,11 @@ void EditorZoomWidget::_button_zoom_minus() {
 }
 
 void EditorZoomWidget::_button_zoom_reset() {
+	// When making a new scene, allow shortcuts if the root
+	// has not been decided.
+	if (SceneTreeDock::get_singleton()->get_editor_data()->get_edited_scene_root() == nullptr) {
+		return;
+	}
 	set_zoom(1.0 * MAX(1, EDSCALE));
 	emit_signal(SNAME("zoom_changed"), zoom);
 }
