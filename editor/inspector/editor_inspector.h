@@ -127,6 +127,8 @@ public:
 		MENU_DELETE,
 		MENU_REVERT_VALUE,
 		MENU_OPEN_DOCUMENTATION,
+		MENU_COPY_VALUE_AS_JSON,
+		MENU_PASTE_VALUE_AS_JSON,
 	};
 
 	enum ColorationMode {
@@ -340,6 +342,8 @@ public:
 
 	bool can_revert_to_default() const { return can_revert; }
 
+	void copy_as_json(Variant p_to_copy);
+	bool try_to_paste_json();
 	void menu_option(int p_option);
 
 	EditorProperty();
