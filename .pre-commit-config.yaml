@@ -109,6 +109,12 @@ repos:
         files: ^(doc/classes|.*/doc_classes)/.*\.xml$
         additional_dependencies: [xmlschema]
 
+      - id: check-comments
+        name: check-comments
+        language: python
+        entry: python misc/scripts/check_comments.py
+        files: \.(c|h|cpp|hpp|cc|hh|cxx|hxx|m|mm|inc)$
+
       - id: validate-codeowners
         name: validate-codeowners
         language: python
