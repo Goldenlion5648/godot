@@ -1,0 +1,104 @@
+c92ef757cb Sync translations with Weblate
+808be5198c Tweak warning to reflect current state
+382d320008 Jolt Physics: Fix default area parameter updates not propagating to bodies
+327d1413d5 Fix stretch mode in custom_timeline on AnimationNodeAnimation
+9452ed155c [Docs] Add platform support notes to window flags.
+0a0c95774c [CI] Remove `build_deps` from Windows artifacts.
+f30ffa8b44 [XR] Fix a crash when spatial entity marker trackers are detected
+8d713d397f Fix BoxContainer size bugs when editor scale is not 1.0
+6a4c61feb2 EditorPropertyArray clipping fix
+c4e91ee267 Jolt: Fix gravity scale not updating when set from code
+679b70a45f Fix the center of AreaLight3Ds being incorrect, per Sarcen on discord
+a807987350 Document the expected format for the project settings override file
+b527505338 Revert "Fix a deadlock in WorkerThreadPool"
+2a7d14671a Jolt: Remove forced area event queuing during body exit
+2fdeee8643 Fix incorrect release order for items in the asset store
+af2fea0ad3 Fix leftover particle data when updating particle buffers.
+99cde15524 Link to 3D lights and shadows tutorial in AreaLight3D class documentation
+f204ebaa39 Fix some issues and crashes in the asset store
+ae564feb2a Fix a deadlock in WorkerThreadPool
+d937734801 Update Tree reference to explain new drop sections
+a43cc6ad2f Fix assets with license type of "Other" not showing up
+0c2a33a215 Link to Multiple Windows demo project in Window class documentation
+07f3a3f855 [RTL] Do not add zero-width space to last line without content.
+7ab8328204 Don't flush the message queue before a MainLoop is iterating
+57ba88fba7 [RTL] Fix indent / list level not taken into account.
+c3b215de96 Add null check for root_animation_node in AnimationTree
+363610d752 [Editor] Fix `SceneTreeEditor` drop.
+824dbc5aed Fixed IndexError caused by debug_tag_stack.pop() and added new error messages.
+0ac3a3af99 Use generic description for experimental flag on DrawableTexture2D methods
+9d03a4937b Sync translations with Weblate
+ea2cc82451 Fix first tile not being randomized
+a4f5e8cddf Bump version to 4.7-rc
+43b2edabf5 Fix ZIPPacker creating empty directory entries - bruvzg fix
+b88a62f805 Fix ResourceLoader deadlocks
+c640059ece Check blend weight for AnimNode error&remove _validate_animation_graph
+52f27370ab Fix a deadlock in CanvasRenderRD
+d92a1acc36 Fix trackball when use local space is enabled
+5a017a1f5e GDScript: Exclude `globals` internal classes in the analyzer
+d3ca1b4c20 Wrap project titles
+80de17565c Update D3D12 download script to use current release.
+135a7361a2 Fixed 'Move Up/Down' editing foreign nodes.
+d333da746e Disable navigation gizmo by default for Desktop platforms
+fd574d221f Fix download scripts and build in the MSYS2 environment.
+7401fcdfe0 Clarify performance impact of AreaLight3D nodes in the documentation
+fff89b78e7 Update download URL for GABE
+2896cd9ef4 Fix area light atlas also destroying VoxelGI uniform sets.
+15d8191fbf OpenGL: Fix vertex shader compilation error with `EYE_OFFSET`
+aa5f5054e2 Prevent crash when detaching freed debugger
+facdd8eea6 [RTL] Fix last line height with some fallback fonts.
+8984aff92c Fixed 'Change Type' ignoring non-top-level nodes and editing foreign nodes/ being available when it is not.
+d9c53f29e0 Fixed 'Open Documentation' ignoring non-top-level nodes.
+3c599ae744 Change ConeTwistJoint3D to use cone shaped limits
+4b82c44607 Fix AnimationNode's branching by custom timeline usage
+e2da592ef3 Do not repeat a pulseaudio message
+7f14bfd6b1 Pulseaudio: Do not crash when getting latency when disconnected
+568833cb86 Don't use CreateCommandList1 on D3D12.
+48f9cf19af Put area light cluster iterations behind a spec constant.
+b5d9b7a32b Properly update shader text syntax highlighting (for disabled regions)
+3bb55a2e07 [macOS] Fix build with enabled ANGLE and disabled Vulkan/Metal.
+3f17c3a8ce Fix CanvasItemEditor::center_at rounding
+ae594ad4dc Use Vector2 for LabelSettings stacked shadows offset
+108a58f995 Fix empty animation menu in blend space editor
+94d51d48df Make `AnimationNodeAnimation`'s custom timeline processing logic compatible with `AnimationMixer`
+e66fe1a93a Enable `touch_dragger` in `ExportTemplateManager` on touchscreen devices
+88495e6cce Fix scene tab menu not updating tab bar.
+a87d3cbf99 remove the godot::String and godot::StringName from godot.natvis, those visualizers are going to be in godot-cpp (https://github.com/godotengine/godot-cpp/pull/1977)
+af132825e4 Fix EditorSpinSlider not showing tooltips
+a64b7cb57d CI: Only free runner disk space when sanitized
+cdc278dfa6 Fix `EditorPlugin::remove_control_from_docks` freeing passed control
+f2da5801e8 Fix spelling of GDExtension in the Export Template Manager
+586d613f43 Fix drawable texture access before null check.
+df21ac92b8 Fix remote scene tree expanding selected nodes on reveal
+781744ddbd Fix AudioStream filename text clipping in the inspector
+98bb65ec8f Fix MeshLibrary editor typo
+4ff30699fd Improve some strings in ScenePaint2DEditor
+0490383004 Fix Polygon2D culling against a stale AABB on the draw fast path
+374102cfbe Fix ResourceLoader::load_threaded_get() deadlocks
+c16d328bf7 Text fixes in template manager
+ebd523edb0 Fix my name in the mailmap
+609d94712c Document ImageFormatLoader LoaderFlags constants
+138958c7cb Clarify that search_bar_min_item_count does not count separators
+97ed318d3c Disable version list while downloading template
+c2ef9d3d5b Fix Curve point count expansion preserving points
+12d6f1848d [CODEOWNERS] `modules/` improvements
+ed11e2610f Sync translations with Weblate (first 4.7 sync)
+df38dbe271 [VideoStreamPlaybackTheora] Uninitialize and print error if file has no video stream.
+93c396382d iOS: Fix ignored orientation changes in embedded mode
+5624c4409b Fix RichTextLabel tab_size 0 causing 1px indent on lists and indents
+fdd53b7b1d macos: Fix mouse warp for embedded game window
+e4034355de GDScript: Move stack cleanup after resumed coroutine completion
+a458840a1c Improve version label visual in the asset dialog
+89d7b494d7 Add property to auto adjust oversampling with canvas item scale. Apply it to theme preview.
+adcdcd9d9d Fix `Input.parse_input_event` `Button` regression
+ab57be1959 Fix PopupMenu counting separators for search bar
+e1732f7643 Fix collapse state regression in the FileSystem dock
+3a49491ff0 Ensure that BPTC LayeredTexture images get compressed with same signedness
+e9be326dea [Metal] Restrict residency set support to Apple6+ GPUs.
+f8b0055ca4 Fix missing get_drop_section_at_position results
+5d961d10ec Wayland: Track transformed mouse position directly
+1e26d5ef7b Wayland: Track mouse enter/exit events globally
+8a893af832 Remove undefined behaviour around web exit
+c7bbcd14c9 make box layout use ceiling of minimum size
+4975a62a7b Fix BaseButton shortcut feedback being affected by time scale
+19af11ac98 Migrate GDScript design guidelines to the contributing docs.
