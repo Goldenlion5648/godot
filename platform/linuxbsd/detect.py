@@ -99,6 +99,10 @@ def configure(env: "SConsEnvironment"):
     validate_arch(env["arch"], get_name(), supported_arches)
 
     ## Build type
+    if env.dev_build:
+        # This is needed for our crash handler to work properly.
+        # gdb works fine without it though, so maybe our crash handler could too.
+        env.Append(LINKFLAGS=["-rdynamic"])
 
     # Cross-compilation
     # TODO: Support cross-compilation on architectures other than x86.
