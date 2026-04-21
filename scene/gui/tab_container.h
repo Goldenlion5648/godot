@@ -56,7 +56,6 @@ private:
 	bool tabs_visible = true;
 	bool allows_tab_hotkeys = false;
 	bool all_tabs_in_front = false;
-#endif
 	TabPosition tabs_position = POSITION_TOP;
 	mutable ObjectID popup_obj_id;
 	bool use_hidden_tabs_for_min_size = false;
@@ -190,9 +189,6 @@ public:
 
 	void set_tabs_visible(bool p_visible);
 	bool are_tabs_visible() const;
-
-	void set_allows_tab_hotkeys(bool p_allow_hotkeys);
-	bool does_allow_tab_hotkeys() const;
 
 	void set_allows_tab_hotkeys(bool p_allow_hotkeys);
 	bool does_allow_tab_hotkeys() const;
