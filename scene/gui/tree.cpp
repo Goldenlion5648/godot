@@ -123,6 +123,7 @@ void TreeItem::_change_tree(Tree *p_tree) {
 
 	if (tree) {
 		tree->sticky_list.clear();
+		tree->sticky_list.clear();
 		if (tree->root == this) {
 			tree->root = nullptr;
 		}
@@ -5700,6 +5701,55 @@ void Tree::_notification(int p_what) {
 					rendering_server->canvas_item_set_custom_rect(content_ci, !is_visibility_clip_disabled(), main_clip_rect.grow_side(SIDE_TOP, -(sticky_stack_end + content_rect.position.y)));
 					rendering_server->canvas_item_set_custom_rect(stylebox_ci, !is_visibility_clip_disabled(), main_clip_rect.grow_side(SIDE_TOP, -(sticky_stack_end + content_rect.position.y)));
 					rendering_server->canvas_item_set_custom_rect(custom_ci, !is_visibility_clip_disabled(), main_clip_rect.grow_side(SIDE_TOP, -(sticky_stack_end + content_rect.position.y)));
+					rendering_server->canvas_item_set_custom_rect(header_ci, !is_visibility_clip_disabled(), header_clip_rect.grow_side(SIDE_BOTTOM, last_ofs.y + content_rect.position.y));
+				}
+			}
+
+			sticky_stack_end = 0;
+			if (root) {
+				sticky_list.clear();
+				Vector2 stick_ofs;
+				Vector2 last_ofs = stick_ofs;
+				real_t height_limit = get_size().y * .4; // Prevent sticky items from ever exceeding 40% of the space
+
+				// Filter sticky candidates and cache their sticky positions
+				for (int i = sticky_candidates.size() - 1; i >= 0; i--) {
+					TreeItem *item = sticky_candidates[i];
+					bool past_top = item->cached_start - theme_cache.offset.y < stick_ofs.y;
+					bool stickable = !item->collapsed && item->get_child_count() > 0;
+					bool hidden_root = hide_root && item == root;
+					if (past_top && stickable && !hidden_root) {
+						if (item->cached_total_end - theme_cache.offset.y > stick_ofs.y) {
+							last_ofs = stick_ofs;
+							stick_ofs.y = MIN(stick_ofs.y, item->cached_total_end - theme_cache.offset.y - item->cached_label_height);
+							item->sticky_offset = stick_ofs;
+							sticky_list.push_back(item);
+							stick_ofs.x += theme_cache.item_margin;
+							stick_ofs.y += item->cached_label_height;
+						}
+					}
+					if ((int)sticky_list.size() >= theme_cache.scroll_max_sticky_items || stick_ofs.y >= height_limit) {
+						break;
+					}
+				}
+
+				sticky_stack_end = stick_ofs.y;
+				for (int i = sticky_list.size() - 1; i >= 0; i--) {
+					bool is_last = i == (int)sticky_list.size() - 1;
+					TreeItem *item = sticky_list[i];
+
+					// Draw sticky items without a scroll offset temporarily
+					Point2 old_offset = theme_cache.offset;
+					theme_cache.offset.y = 0;
+					int self_height = 0;
+					draw_item(item->sticky_offset, draw_ofs, draw_size, item, self_height, is_last ? last_sticky_ci : header_ci);
+					theme_cache.offset = old_offset;
+				}
+
+				if (!sticky_list.is_empty()) {
+					rendering_server->canvas_item_set_custom_rect(last_sticky_ci, !is_visibility_clip_disabled(), Rect2(0, last_ofs.y + draw_ofs.y, get_size().x, sticky_stack_end - last_ofs.y));
+					rendering_server->canvas_item_set_custom_rect(content_ci, !is_visibility_clip_disabled(), main_clip_rect.grow_side(SIDE_TOP, -(sticky_stack_end + content_rect.position.y)));
+					rendering_server->canvas_item_set_custom_rect(stylebox_ci, !is_visibility_clip_disabled(), main_clip_rect.grow_side(SIDE_TOP, -(sticky_stack_end + content_rect.position.y)));
 					rendering_server->canvas_item_set_custom_rect(header_ci, !is_visibility_clip_disabled(), header_clip_rect.grow_side(SIDE_BOTTOM, last_ofs.y + content_rect.position.y));
 				}
 			}
