@@ -204,9 +204,6 @@ public:
 	void set_allows_tab_hotkeys(bool p_allow_hotkeys);
 	bool does_allow_tab_hotkeys() const;
 
-	void set_allows_tab_hotkeys(bool p_allow_hotkeys);
-	bool does_allow_tab_hotkeys() const;
-
 	void set_all_tabs_in_front(bool p_is_front);
 	bool is_all_tabs_in_front() const;
 
