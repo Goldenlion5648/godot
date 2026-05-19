@@ -323,6 +323,22 @@ private:
 	LocalVector<Underline> underlines;
 	void _cut_line_from_underline(Underline &r_ul, int p_line);
 
+	// Underline effects.
+	struct Underline {
+		Color color;
+		int start_line;
+		int start_column;
+		int end_line;
+		int end_column;
+
+		bool contains_line(int p_line) const {
+			return start_line <= p_line && p_line <= end_line;
+		}
+	};
+	LocalVector<Underline> underlines;
+	Vector<Underline> _cut_line_from_underline(const Underline &p_ul, int p_line);
+	Vector<Underline> _get_underline_data_for_line(int p_line);
+
 	// Placeholder
 	String placeholder_text = "";
 	Array placeholder_bidi_override;
