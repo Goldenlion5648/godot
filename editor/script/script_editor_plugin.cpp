@@ -76,6 +76,7 @@
 #include "editor/shader/shader_text_editor.h"
 #include "editor/themes/editor_scale.h"
 #include "editor/themes/editor_theme_manager.h"
+#include "scene/gui/flow_container.h"
 #include "scene/gui/separator.h"
 #include "scene/gui/tab_container.h"
 #include "scene/gui/texture_rect.h"
@@ -2602,8 +2603,8 @@ bool ScriptEditor::edit(const Ref<Resource> &p_resource, int p_line, int p_col, 
 		if (!editor_edit_menu->get_parent()) {
 			editor_edit_menu->hide();
 			editor_menus.push_back(editor_edit_menu);
-			menu_hb->add_child(editor_edit_menu);
-			menu_hb->move_child(editor_edit_menu, 1);
+			menu_hflow->add_child(editor_edit_menu);
+			menu_hflow->move_child(editor_edit_menu, 1);
 			for (int i = 0; i < editor_edit_menu->get_child_count(); ++i) {
 				Control *c = Object::cast_to<Control>(editor_edit_menu->get_child(i));
 				if (c) {
@@ -4133,8 +4134,10 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	VBoxContainer *main_container = memnew(VBoxContainer);
 	add_child(main_container);
 
-	menu_hb = memnew(HBoxContainer);
-	main_container->add_child(menu_hb);
+	menu_hflow = memnew(HFlowContainer);
+	menu_hflow->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+	menu_hflow->set_h_size_flags(Control::SIZE_EXPAND_FILL);
+	main_container->add_child(menu_hflow);
 
 	script_split = memnew(HSplitContainer);
 	main_container->add_child(script_split);
@@ -4222,7 +4225,7 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	file_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptEditor::_menu_option));
 	file_menu->get_popup()->connect("about_to_popup", callable_mp(this, &ScriptEditor::_prepare_file_menu));
 	file_menu->get_popup()->connect("popup_hide", callable_mp(this, &ScriptEditor::_file_menu_closed));
-	menu_hb->add_child(file_menu);
+	menu_hflow->add_child(file_menu);
 	recent_scripts = memnew(PopupMenu);
 	recent_scripts->set_auto_translate_mode(AUTO_TRANSLATE_MODE_DISABLED);
 	recent_scripts->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptEditor::_open_recent_script));
@@ -4271,13 +4274,13 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	script_search_menu->set_switch_on_hover(true);
 	script_search_menu->set_shortcut_context(this);
 	script_search_menu->get_popup()->connect(SceneStringName(id_pressed), callable_mp(this, &ScriptEditor::_menu_option));
-	menu_hb->add_child(script_search_menu);
+	menu_hflow->add_child(script_search_menu);
 
 	if (this == script_editor) {
 		MenuButton *debug_menu_btn = memnew(MenuButton);
 		debug_menu_btn->set_flat(false);
 		debug_menu_btn->set_theme_type_variation("FlatMenuButton");
-		menu_hb->add_child(debug_menu_btn);
+		menu_hflow->add_child(debug_menu_btn);
 		debug_menu_btn->hide(); // Handled by EditorDebuggerNode below.
 
 		EditorDebuggerNode *debugger = EditorDebuggerNode::get_singleton();
@@ -4293,7 +4296,7 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	script_name_button_hbox->set_h_size_flags(SIZE_EXPAND_FILL);
 	script_name_button_hbox->add_theme_constant_override("separation", 0);
 	script_name_button_hbox->connect(SceneStringName(item_rect_changed), callable_mp(this, &ScriptEditor::_calculate_script_name_button_ratio));
-	menu_hb->add_child(script_name_button_hbox);
+	menu_hflow->add_child(script_name_button_hbox);
 
 	script_name_button_left_spacer = memnew(Control);
 	script_name_button_left_spacer->set_h_size_flags(Control::SIZE_EXPAND_FILL);
@@ -4315,18 +4318,18 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	site_search->set_theme_type_variation(SceneStringName(FlatButton));
 	site_search->set_accessibility_name(TTRC("Site Search"));
 	site_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_WEBSITE));
-	menu_hb->add_child(site_search);
+	menu_hflow->add_child(site_search);
 
 	if (this == script_editor) {
 		help_search = memnew(Button);
 		help_search->set_theme_type_variation(SceneStringName(FlatButton));
 		help_search->set_text(TTRC("Search Help"));
 		help_search->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_menu_option).bind(SEARCH_HELP));
-		menu_hb->add_child(help_search);
+		menu_hflow->add_child(help_search);
 		help_search->set_tooltip_text(TTRC("Search the reference documentation."));
 	}
 
-	menu_hb->add_child(memnew(VSeparator));
+	menu_hflow->add_child(memnew(VSeparator));
 
 	script_back = memnew(Button);
 	script_back->set_theme_type_variation(SceneStringName(FlatButton));
@@ -4334,7 +4337,7 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	script_back->set_shortcut(ED_GET_SHORTCUT("script_editor/history_previous"));
 	script_back->set_shortcut_context(this);
 	script_back->set_disabled(true);
-	menu_hb->add_child(script_back);
+	menu_hflow->add_child(script_back);
 	script_back->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_history_back));
 
 	script_forward = memnew(Button);
@@ -4343,7 +4346,7 @@ ScriptEditor::ScriptEditor(const String &p_config_section, const String &p_cache
 	script_forward->set_shortcut(ED_GET_SHORTCUT("script_editor/history_next"));
 	script_forward->set_shortcut_context(this);
 	script_forward->set_disabled(true);
-	menu_hb->add_child(script_forward);
+	menu_hflow->add_child(script_forward);
 	script_forward->connect(SceneStringName(pressed), callable_mp(this, &ScriptEditor::_history_forward));
 
 	tab_container->connect("tab_changed", callable_mp(this, &ScriptEditor::ensure_select_current).unbind(1));
