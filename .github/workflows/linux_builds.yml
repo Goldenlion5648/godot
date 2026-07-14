@@ -31,12 +31,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Editor w/ Mono (target=editor)
+          - name: Editor (target=editor)
             cache-name: linux-editor-mono
             target: editor
-            scons-flags: module_mono_enabled=yes compiledb=yes
-            bin: ./bin/godot.linuxbsd.editor.x86_64.mono
-            build-mono: true
+            scons-flags: compiledb=yes
+            bin: ./bin/godot.linuxbsd.editor.x86_64
+            build-mono: false
             doc-test: true
             proj-conv: true
             proj-export: true
