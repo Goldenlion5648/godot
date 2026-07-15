@@ -32,7 +32,7 @@ jobs:
       matrix:
         include:
           - name: Editor (target=editor)
-            cache-name: linux-editor-mono
+            cache-name: linux-editor
             target: editor
             scons-flags: compiledb=yes
             bin: ./bin/godot.linuxbsd.editor.x86_64
