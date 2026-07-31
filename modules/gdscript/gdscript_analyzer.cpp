@@ -2035,7 +2035,7 @@ void GDScriptAnalyzer::resolve_function_body(GDScriptParser::FunctionNode *p_fun
 	}
 
 	for (const GDScriptParser::ParameterNode *const param : p_function->parameters) {
-		if (param->usages == 0 && !String(param->identifier->name).begins_with("_")) {
+		if (param->usages == 0 && !String(param->identifier->name).begins_with("_") && String(param->identifier->name) != "delta") {
 			parser->push_warning(param->identifier, GDScriptWarning::UNUSED_PARAMETER, function_visible_name, param->identifier->name);
 		}
 	}
