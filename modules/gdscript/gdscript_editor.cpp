@@ -48,6 +48,8 @@
 #include "core/object/class_db.h"
 #include "core/variant/container_type_validate.h"
 
+#include "modules/regex/regex.h"
+
 #ifdef TOOLS_ENABLED
 #include "core/config/project_settings.h"
 #include "editor/editor_node.h"
@@ -3494,10 +3496,6 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 		completion_context.base = p_owner;
 	}
 	bool is_function = false;
-	Vector<String> snippet_completion = EDITOR_GET("text_editor/completion/snippets");
-	for (const String &completion : snippet_completion) {
-		options.insert(completion, ScriptLanguage::CodeCompletionOption{ completion, ScriptLanguage::CODE_COMPLETION_KIND_USER_SNIPPET, ScriptLanguage::CodeCompletionLocation::LOCATION_OTHER, "", true });
-	}
 
 	switch (completion_context.type) {
 		case GDScriptParser::COMPLETION_NONE:
@@ -3898,6 +3896,25 @@ static void _find_call_arguments(GDScriptParser::CompletionContext &p_context, c
 			}
 			_find_identifiers_in_class(completion_context.current_class, true, false, false, true, !_guess_expecting_callable(completion_context), options, 0);
 		} break;
+	}
+
+	int caret_pos = p_code.find_char(char32_t(0xFFFF));
+	if (options.size() > 0 && caret_pos >= 3) {
+		bool should_add_snippet_suggestions = true;
+		RegEx word_regex = RegEx("\\w");
+		for (int i = 1; i <= 3; i++) {
+			String cur_letter = p_code.substr(caret_pos - i, 1);
+			if (!word_regex.search(cur_letter).is_valid()) {
+				should_add_snippet_suggestions = false;
+				break;
+			}
+		}
+		if (should_add_snippet_suggestions) {
+			Vector<String> snippet_completion = EDITOR_GET("text_editor/completion/snippets");
+			for (const String &completion : snippet_completion) {
+				options.insert(completion, ScriptLanguage::CodeCompletionOption{ completion, ScriptLanguage::CODE_COMPLETION_KIND_USER_SNIPPET, ScriptLanguage::CodeCompletionLocation::LOCATION_OTHER, "", true });
+			}
+		}
 	}
 
 	for (const KeyValue<String, ScriptLanguage::CodeCompletionOption> &E : options) {
