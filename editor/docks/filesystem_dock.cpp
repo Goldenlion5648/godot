@@ -41,6 +41,7 @@
 #include "core/object/class_db.h"
 #include "core/os/keyboard.h"
 #include "core/os/os.h"
+#include "core/string/regex.h"
 #include "core/templates/list.h"
 #include "editor/docks/editor_dock_manager.h"
 #include "editor/docks/import_dock.h"
@@ -874,7 +875,7 @@ bool FileSystemDock::_update_filtered_items(TreeItem *p_tree_item) {
 	} else {
 		// res:// and favorites are always visible.
 		keep_visible = item == resources_item || item == favorites_item;
-		keep_visible = keep_visible || _matches_all_search_tokens(item->get_text(0));
+		keep_visible = keep_visible || _matches_all_search_tokens(item->get_metadata(0));
 	}
 	item->set_visible(keep_visible);
 	return keep_visible;
@@ -2881,7 +2882,20 @@ void FileSystemDock::_search_changed(const String &p_text, const Control *p_from
 		uncollapsed_paths_before_search = get_uncollapsed_paths();
 	}
 
-	const String searched_string = p_text.to_lower();
+	// This is "cached" similar to `searched_tokens` below.
+	searched_string = p_text.to_lower();
+	searched_string_as_regex.clear();
+	if (searched_string.ends_with("/")) {
+		searched_string += "**";
+	}
+	searched_string_as_regex.compile(vformat("^%s$",
+			searched_string
+					// .replace("/", "\\/")
+					.replace("\\", "\\\\")
+					.replace(".", "\\.")
+					.replace("**", ".+")
+					.replace("*", "[^/]*")));
+
 	if (searched_string.begins_with("uid://")) {
 		ResourceUID::ID id = ResourceUID::get_singleton()->text_to_id(searched_string);
 		if (id != ResourceUID::INVALID_ID && ResourceUID::get_singleton()->has_id(id)) {
@@ -2907,17 +2921,21 @@ void FileSystemDock::_search_changed(const String &p_text, const Control *p_from
 	}
 }
 
-bool FileSystemDock::_matches_all_search_tokens(const String &p_text) {
+bool FileSystemDock::_matches_all_search_tokens(const String &p_text_being_searched_in) {
 	if (searched_tokens.is_empty()) {
 		return false;
 	}
-	const String s = p_text.to_lower();
-	for (const String &t : searched_tokens) {
-		if (!s.contains(t) && !s.matchn(t)) {
-			return false;
-		}
+	String text_to_search_in_no_prefix = p_text_being_searched_in.trim_prefix("res://");
+	if (!searched_string.contains("*") && !searched_string.contains("/")) {
+		return searched_string.is_subsequence_ofn(text_to_search_in_no_prefix);
 	}
-	return true;
+	// These are basically glob search.
+	// If the user typed a "/", they do care about filtering directories.
+	if (searched_string.contains("/") || searched_string == "*") {
+		return searched_string_as_regex.search(text_to_search_in_no_prefix).is_valid();
+	}
+	// Otherwise, only the base file should be taken into consideration.
+	return searched_string_as_regex.search(text_to_search_in_no_prefix.get_file()).is_valid();
 }
 
 void FileSystemDock::_rescan() {
@@ -4595,6 +4613,7 @@ FileSystemDock::FileSystemDock() {
 	tree_search_box = memnew(LineEdit);
 	tree_search_box->set_h_size_flags(SIZE_EXPAND_FILL);
 	tree_search_box->set_placeholder(TTRC("Filter Files"));
+	tree_search_box->set_tooltip_text(TTRC("Filter Files\nSupports glob search"));
 	tree_search_box->set_clear_button_enabled(true);
 	tree_search_box->connect(SceneStringName(text_changed), callable_mp(this, &FileSystemDock::_search_changed).bind(tree_search_box));
 	toolbar2_hbc->add_child(tree_search_box);
