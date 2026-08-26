@@ -2471,9 +2471,9 @@ void GDScriptAnalyzer::resolve_for(GDScriptParser::ForNode *p_for) {
 					p_for->second_use_conversion_assign = true;
 				}
 			}
-			p_for->second_variable->datatype = second_specified_type;
+			p_for->second_variable->type_constraint = second_specified_type;
 		} else {
-			p_for->second_variable->datatype = second_variable_type;
+			p_for->second_variable->type_constraint = second_variable_type;
 #ifdef DEBUG_ENABLED
 			if (second_variable_type.is_hard_type()) {
 				parser->push_warning(p_for->second_variable, GDScriptWarning::INFERRED_DECLARATION, R"("for" iterator second variable)", p_for->second_variable->name);

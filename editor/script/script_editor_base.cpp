@@ -470,9 +470,9 @@ bool TextEditorBase::_edit_option(int p_op) {
 		case EDIT_JOIN_LINES: {
 			tx->join_lines();
 		} break;
-		case ERROR_GOTO_NEXT: {
-			code_editor->goto_error();
-		} break;
+		// case ERROR_GOTO_NEXT: {
+		// 	code_editor->goto_line_centered(error_line, error_column);
+		// } break;
 		case EDIT_DUPLICATE_SELECTION: {
 			tx->duplicate_selection();
 		} break;

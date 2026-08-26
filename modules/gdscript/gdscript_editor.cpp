@@ -46,9 +46,8 @@
 #include "core/io/resource_loader.h"
 #include "core/math/expression.h"
 #include "core/object/class_db.h"
+#include "core/string/regex.h"
 #include "core/variant/container_type_validate.h"
-
-#include "modules/regex/regex.h"
 
 #ifdef TOOLS_ENABLED
 #include "core/config/project_settings.h"

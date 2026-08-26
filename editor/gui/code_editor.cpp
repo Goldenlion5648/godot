@@ -934,7 +934,7 @@ void CodeTextEditor::input(const Ref<InputEvent> &event) {
 		return;
 	}
 	if (ED_IS_SHORTCUT("script_text_editor/next_error", key_event)) {
-		goto_error();
+		goto_line_centered(error_line, error_column);
 		accept_event();
 		return;
 	}

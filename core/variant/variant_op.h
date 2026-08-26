@@ -380,29 +380,6 @@ public:
 	static Variant::Type get_return_type() { return GetTypeInfo<Vector4i>::VARIANT_TYPE; }
 };
 
-template <>
-class OperatorEvaluatorModNZ<int64_t, int64_t, int64_t> {
-public:
-	static void evaluate(const Variant &p_left, const Variant &p_right, Variant *r_ret, bool &r_valid) {
-		const int64_t &a = VariantInternalAccessor<int64_t>::get(&p_left);
-		const int64_t &b = VariantInternalAccessor<int64_t>::get(&p_right);
-		if (unlikely(b == 0)) {
-			r_valid = false;
-			*r_ret = "Modulo by zero error";
-			return;
-		}
-		*r_ret = Math::modulo_no_overflow(a, b);
-		r_valid = true;
-	}
-	static inline void validated_evaluate(const Variant *p_left, const Variant *p_right, Variant *r_ret) {
-		VariantInternalAccessor<int64_t>::get(r_ret) = Math::modulo_no_overflow(VariantInternalAccessor<int64_t>::get(p_left), VariantInternalAccessor<int64_t>::get(p_right));
-	}
-	static void ptr_evaluate(const void *p_left, const void *p_right, void *r_ret) {
-		PtrToArg<int64_t>::encode(Math::modulo_no_overflow(PtrToArg<int64_t>::convert(p_left), PtrToArg<int64_t>::convert(p_right)), r_ret);
-	}
-	static Variant::Type get_return_type() { return GetTypeInfo<int64_t>::VARIANT_TYPE; }
-};
-
 template <typename R, typename A>
 class OperatorEvaluatorNeg : public CommonEvaluate<OperatorEvaluatorNeg<R, A>> {
 public:

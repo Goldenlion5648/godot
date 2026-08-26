@@ -2100,8 +2100,8 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Sui
 				}
 
 				if (for_n->second_variable) {
-					second_iterator = codegen.add_local(for_n->second_variable->name, _gdtype_from_datatype(for_n->second_variable->datatype, codegen.script));
-					if (for_n->list->datatype.is_variant()) {
+					second_iterator = codegen.add_local(for_n->second_variable->name, _gdtype_from_datatype(for_n->second_variable->type_constraint, codegen.script));
+					if (for_n->list->type_constraint.is_variant()) {
 						gen->write_for_dictionary_type_check(second_iterator);
 					}
 				}
@@ -2112,7 +2112,7 @@ Error GDScriptCompiler::_parse_block(CodeGen &codegen, const GDScriptParser::Sui
 				List<GDScriptCodeGenerator::Address> loop_locals = _add_block_locals(codegen, for_n->loop);
 
 				if (for_n->second_variable) {
-					second_iterator = codegen.add_local(for_n->second_variable->name, _gdtype_from_datatype(for_n->second_variable->datatype, codegen.script));
+					second_iterator = codegen.add_local(for_n->second_variable->name, _gdtype_from_datatype(for_n->second_variable->type_constraint, codegen.script));
 					gen->write_for_second_variable_assignment(second_iterator, for_n->second_use_conversion_assign);
 				}
 
