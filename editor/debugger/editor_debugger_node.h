@@ -64,6 +64,7 @@ private:
 		DEBUG_MOVE_DOWN_CALL_STACK,
 		DEBUG_TOP_OF_CALL_STACK,
 		DEBUG_BOTTOM_OF_CALL_STACK,
+		DEBUG_SKIP_BREAKPOINTS,
 		DEBUG_WITH_EXTERNAL_EDITOR,
 	};
 
@@ -188,6 +189,7 @@ public:
 	void debug_move_down_in_call_stack();
 	void debug_top_of_call_stack();
 	void debug_bottom_of_call_stack();
+	void debug_skip_breakpoints();
 
 	void set_script_debug_button(MenuButton *p_button);
 
