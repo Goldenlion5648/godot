@@ -41,11 +41,13 @@
 #endif
 
 #include "core/config/engine.h"
+#include "core/core_bind.h"
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 #include "core/math/expression.h"
 #include "core/object/class_db.h"
+#include "core/os/os.h"
 #include "core/variant/container_type_validate.h"
 
 #ifdef TOOLS_ENABLED
@@ -168,11 +170,43 @@ static void get_function_names_recursively(const GDScriptParser::ClassNode *p_cl
 	}
 }
 
+String GDScriptEditorLanguage::preprocess(const String &p_source_code) const {
+	List<String> args;
+	String pipe;
+	args.push_back("/home/golden/Documents/programming/prs/godot/preprocess_macro.py");
+	args.push_back("--output_file_path");
+	args.push_back("/home/golden/Documents/programming/prs/godot/compiler_output.gd");
+	args.push_back("--base64_input_string");
+	args.push_back(CoreBind::Marshalls::get_singleton()->utf8_to_base64(p_source_code));
+	Error err = OS::get_singleton()->execute("/usr/bin/python", args, &pipe, nullptr, true);
+	if (err != OK) {
+		return "";
+	}
+	return pipe;
+}
+
+int GDScriptEditorLanguage::get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const {
+	const String comment_from_macro = "#SOURCE_LINE:";
+	const String insert_macro_indicator = "!!";
+	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed);
+	if (line_text.contains(comment_from_macro)) {
+		int pos_of_line_number_in_comment = line_text.find(comment_from_macro) + comment_from_macro.length();
+		int line_with_macro_insertion = line_text.substr(pos_of_line_number_in_comment).to_int();
+		int macro_start_col = 0;
+		if (line_text.contains(comment_from_macro)) {
+			macro_start_col = line_text.find(insert_macro_indicator);
+		}
+		return line_with_macro_insertion;
+	}
+	return p_line_num_in_processed;
+}
+
 bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_path, List<ScriptError> *r_errors, List<Warning> *r_warnings, List<String> *r_functions, HashSet<int> *r_safe_lines) const {
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	Error err = parser.parse(p_script, p_path, false);
+	String preprocessed_source_code = preprocess(p_script);
+	Error err = parser.parse(preprocessed_source_code, p_path, false);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
@@ -196,9 +230,9 @@ bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_pa
 			for (const GDScriptParser::ParserError &pe : parser.get_errors()) {
 				ScriptError e;
 				e.path = p_path;
-				e.start_line = pe.start_line;
+				e.start_line = get_line_number_in_original_source(preprocessed_source_code, pe.start_line);
 				e.start_column = pe.start_column;
-				e.end_line = pe.end_line;
+				e.end_line = get_line_number_in_original_source(preprocessed_source_code, pe.start_line);
 				e.end_column = pe.end_column;
 				e.message = pe.message;
 				r_errors->push_back(e);

@@ -34,9 +34,11 @@
 #include "gdscript_tokenizer_buffer.h"
 
 #include "core/config/project_settings.h"
+#include "core/core_bind.h"
 #include "core/io/resource_loader.h"
 #include "core/math/math_defs.h"
 #include "core/object/class_db.h"
+#include "core/os/os.h"
 #include "scene/main/multiplayer_api.h"
 
 #ifdef DEBUG_ENABLED
@@ -446,10 +448,25 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
+String GDScriptParser::preprocess(const String &p_source_code) const {
+	List<String> args;
+	String pipe;
+	args.push_back("/home/golden/Documents/programming/prs/godot/preprocess_macro.py");
+	args.push_back("--output_file_path");
+	args.push_back("/home/golden/Documents/programming/prs/godot/compiler_output.gd");
+	args.push_back("--base64_input_string");
+	args.push_back(CoreBind::Marshalls::get_singleton()->utf8_to_base64(p_source_code));
+	Error err = OS::get_singleton()->execute("/usr/bin/python", args, &pipe, nullptr, true);
+	if (err != OK) {
+		return "";
+	}
+	return pipe;
+}
+
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String source = p_source_code;
+	String source = preprocess(p_source_code);
 	int cursor_line = -1;
 	int cursor_column = -1;
 	for_completion = p_for_completion;

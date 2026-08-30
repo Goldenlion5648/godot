@@ -48,6 +48,9 @@ public:
 
 	virtual bool validate(const String &p_code, const String &p_path, List<ScriptError> *r_errors, List<Warning> *r_warnings, List<String> *r_functions, HashSet<int> *r_safe_lines) const override;
 
+	String preprocess(const String &p_source_code) const;
+	int get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const;
+
 	GDScriptEditorLanguage() {
 		ERR_FAIL_COND(singleton != nullptr);
 		singleton = this;
