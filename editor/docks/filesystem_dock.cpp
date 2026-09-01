@@ -992,7 +992,7 @@ void FileSystemDock::_search(EditorFileSystemDirectory *p_path, List<FileInfo> *
 	for (int i = 0; i < p_path->get_file_count(); i++) {
 		String file = p_path->get_file(i);
 
-		if (_matches_all_search_tokens(file)) {
+		if (_matches_all_search_tokens(p_path->get_file_path(i) + file)) {
 			FileInfo file_info;
 			file_info.name = file;
 			file_info.type = p_path->get_file_type(i);
@@ -2888,9 +2888,23 @@ void FileSystemDock::_search_changed(const String &p_text, const Control *p_from
 	if (searched_string.ends_with("/")) {
 		searched_string += "**";
 	}
+
+	// Without this check, having **/test at the start means the top level
+	// "test" directory would be skipped.
+	if (searched_string.begins_with("**/")) {
+		searched_string = "**/?" + searched_string.trim_prefix("**/");
+	}
+
+	int slash_asterisk_streak = 0;
+	while (searched_string.ends_with("/*")) {
+		searched_string = searched_string.trim_suffix("/*");
+		slash_asterisk_streak += 1;
+	}
+	if (slash_asterisk_streak > 0) {
+		searched_string = vformat("%s(/*){1,%d}", searched_string, slash_asterisk_streak);
+	}
 	searched_string_as_regex.compile(vformat("^%s$",
 			searched_string
-					// .replace("/", "\\/")
 					.replace("\\", "\\\\")
 					.replace(".", "\\.")
 					.replace("**", ".+")
@@ -4612,7 +4626,7 @@ FileSystemDock::FileSystemDock() {
 
 	tree_search_box = memnew(LineEdit);
 	tree_search_box->set_h_size_flags(SIZE_EXPAND_FILL);
-	tree_search_box->set_placeholder(TTRC("Filter Files"));
+	tree_search_box->set_placeholder(TTRC("Include: e.g. src/**/*.gd"));
 	tree_search_box->set_tooltip_text(TTRC("Filter Files\nSupports glob search"));
 	tree_search_box->set_clear_button_enabled(true);
 	tree_search_box->connect(SceneStringName(text_changed), callable_mp(this, &FileSystemDock::_search_changed).bind(tree_search_box));
@@ -4672,7 +4686,7 @@ FileSystemDock::FileSystemDock() {
 
 	file_list_search_box = memnew(LineEdit);
 	file_list_search_box->set_h_size_flags(SIZE_EXPAND_FILL);
-	file_list_search_box->set_placeholder(TTRC("Filter Files"));
+	file_list_search_box->set_placeholder(TTRC("Include: e.g. src/**/*.gd"));
 	file_list_search_box->set_accessibility_name(TTRC("Filter Files"));
 	file_list_search_box->set_clear_button_enabled(true);
 	file_list_search_box->connect(SceneStringName(text_changed), callable_mp(this, &FileSystemDock::_search_changed).bind(file_list_search_box));
