@@ -102,7 +102,12 @@ protected:
 			return;
 		}
 
-		Vector<uint8_t> file = FileAccess::get_file_as_bytes(p_path);
+		String path_to_read = p_path;
+		Ref<FileAccess> file_check = FileAccess::create(FileAccess::ACCESS_RESOURCES);
+		if (p_path.ends_with(".gd") && file_check->file_exists(path_to_read + ".processed")) {
+			path_to_read += ".processed";
+		}
+		Vector<uint8_t> file = FileAccess::get_file_as_bytes(path_to_read);
 		if (file.is_empty()) {
 			return;
 		}

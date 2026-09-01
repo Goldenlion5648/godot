@@ -55,6 +55,7 @@
 #include "editor/settings/editor_command_palette.h"
 #include "editor/settings/editor_settings.h"
 #include "editor/themes/editor_scale.h"
+// #include "modules/gdscript/gdscript_parser.cpp"
 #include "scene/gui/grid_container.h"
 #include "scene/gui/menu_button.h"
 #include "scene/gui/rich_text_label.h"
@@ -68,7 +69,6 @@ void ConnectionInfoDialog::ok_pressed() {
 
 void ConnectionInfoDialog::popup_connections(const String &p_method, const Vector<Node *> &p_nodes) {
 	method->set_text(p_method);
-
 	tree->clear();
 	TreeItem *root = tree->create_item();
 
@@ -1244,6 +1244,7 @@ void ScriptTextEditor::_lookup_symbol(const String &p_symbol, int p_row, int p_c
 
 	EditorLanguage::LookupResult result;
 	String code_text = code_editor->get_text_editor()->get_text_with_cursor_char(p_row, p_column);
+	// String processed_text = GDScriptParser::preprocess(code_editor->get_text_editor()->get_text());
 	Error lc_error = script->get_language()->get_editor_language()->lookup_code(code_text, p_symbol, script->get_path(), base, result);
 	if (ScriptServer::is_global_class(p_symbol)) {
 		EditorNode::get_singleton()->load_resource(ScriptServer::get_global_class_path(p_symbol));

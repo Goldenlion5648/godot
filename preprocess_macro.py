@@ -8,6 +8,8 @@ SNIPPET_START_INDICATOR_WITH_AT_SIGN = "@snippet_start"
 SNIPPET_END_INDICATOR_WITH_AT_SIGN = "@snippet_end"
 INSERT_SNIPPET_SYMBOL = "!!"
 SOURCE_LINE_COMMENT = "##SOURCE_LINE:"
+MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:"
+MACRO_NAME_AND_DEFINED_DELIMETER = ">"
 
 
 def get_params_from(to_read: str):
@@ -16,38 +18,62 @@ def get_params_from(to_read: str):
 
 
 class SnippetData:
-    def __init__(self, name, lines, param_names):
+    def __init__(self, name, lines, param_names, defined_at_line_num, file_defined_in):
         self.name = name
         self.lines = lines
         self.param_names = param_names
+        self.defined_at_line_num = defined_at_line_num
+        self.file_defined_in = file_defined_in
 
     def get_content_with_values_inserted(self, arg_values):
+        default_macros_to_lamba = {"$LINE_NUM": lambda: str(len(self.output) + 1)}
         param_name_to_value = dict(zip(self.param_names, arg_values))
+        for default, func in default_macros_to_lamba.items():
+            param_name_to_value[default] = func()
         ret = "\n".join(self.lines)
-        for name, value in param_name_to_value.items():
-            ret = ret.replace(name, value)
+        ret = re.sub(r"(\$\w+)\b", lambda found: param_name_to_value[found.group()], ret)
         return ret.split("\n")
+
+    def get_definition_print_out(self):
+        return f"#{self.name}{MACRO_NAME_AND_DEFINED_DELIMETER}{MACRO_DEFINED_AT_COMMENT}{self.defined_at_line_num}"
+
+    # def print_simple(self):
+    #     return ", ".join(x if type(x) == str else ""vars(self).values())
 
     def __repr__(self):
         params_joined = " ".join(self.param_names)
         lines_joined = "\n".join(self.lines)
-        return f"NAME: {self.name}\nPARAMS: {params_joined}\nLINES:\n{lines_joined}\n\n"
+        return f"NAME: {self.name}\nPARAMS: {params_joined}\nLINES:\n{lines_joined}\nDEFINED_AT:{self.defined_at_line_num}\n"
 
 
 class MacroRunner:
-    def __init__(self, data):
+    def __init__(self, data, file_name_with_dot_gd):
         self.line_num = 0
+        self.file_name_with_dot_gd = file_name_with_dot_gd
         self.output = []
+        self.errors = []
         self.data = data
+        self.snippet_name_to_data: dict[str, SnippetData] = {}
+
+    def get_final_output_lines(self):
+        return self.output + self.get_macro_lines()
+
+    def get_macro_lines(self):
+        return [data.get_definition_print_out() for data in self.snippet_name_to_data.values()]
 
     def add_to_output(self, content):
         self.output.append(f"{content} {SOURCE_LINE_COMMENT}{self.line_num + 1}")
 
-    def get_processed_lines(self):
+    def show_snippets(self):
+        for snippet_data in self.snippet_name_to_data.values():
+            print(snippet_data)
+
+    def calculate_processed_lines(self):
         lines = data.splitlines()
+        if INSERT_SNIPPET_SYMBOL not in data:
+            return lines
         self.line_num = 0
         self.output = []
-        snippet_name_to_data: dict[str, SnippetData] = {}
         while self.line_num < len(lines):
             line = lines[self.line_num]
             # finds the macro definition
@@ -58,13 +84,16 @@ class MacroRunner:
                 self.line_num += 1
                 line = lines[self.line_num]
                 snippet_lines = []
+                snippet_starting_line = self.line_num
                 while not line.startswith("@snippet_end"):
                     snippet_lines.append(line)
                     self.add_to_output(f"# ate part of snippet {snippet_name}")
                     self.line_num += 1
                     line = lines[self.line_num]
-                cur_snippet_data = SnippetData(snippet_name, snippet_lines, params)
-                snippet_name_to_data[snippet_name] = cur_snippet_data
+                cur_snippet_data = SnippetData(
+                    snippet_name, snippet_lines, params, snippet_starting_line, self.file_name_with_dot_gd
+                )
+                self.snippet_name_to_data[snippet_name] = cur_snippet_data
                 # print("added snippet:\n", cur_snippet_data)
                 self.add_to_output(f"# ended snippet {snippet_name}")
             else:
@@ -81,8 +110,10 @@ class MacroRunner:
                         snippet_name = re.search(r"\w+", line[col:]).group()
                         col += len(snippet_name)
                         arg_values = get_params_from(line[col:])
-
-                        cur_snippet_data_for_insertion = snippet_name_to_data[snippet_name]
+                        if snippet_name not in self.snippet_name_to_data:
+                            self.errors.append(f"Unknown macro: '{snippet_name}'")
+                            break
+                        cur_snippet_data_for_insertion = self.snippet_name_to_data[snippet_name]
                         lines_with_values = cur_snippet_data_for_insertion.get_content_with_values_inserted(arg_values)
                         if should_insert_whitespace_prefix:
                             lines_with_values = [line_starting_whitespace + line for line in lines_with_values]
@@ -100,7 +131,6 @@ class MacroRunner:
                 if not had_snippet_to_insert_into:
                     self.add_to_output(f"{line}")
             self.line_num += 1
-        return self.output
 
 
 # if False:
@@ -121,7 +151,6 @@ class MacroRunner:
 # with open(args.output_file_path, "w") as f:
 #     f.write("random")
 #     print("wrote to", args.output_file_path)
-
 if __name__ == "__main__":
     try:
         IN_DEBUG = "test_mode" in sys.argv
@@ -129,16 +158,8 @@ if __name__ == "__main__":
         parser.add_argument("--input_file_path", type=str)
         parser.add_argument("--output_file_path", type=str)
         parser.add_argument("--base64_input_string", type=str)
-        if IN_DEBUG:
-            testing_args = [
-                ("--base64_input_string"),
-                "CiMgdGhpcyBydW5zIG9uIGEgc2luZ2xlIGxpbmUKIyBAbW9kaWZ5KHNhdmVfdG9fZGlzaykKIyB2YXIgaGVhbHRoID0gMTAKCgpAc25pcHBldF9zdGFydChjYW5jZWxfb3V0KQppZiB0ZXN0ID09IC0xOgoJcmVzZXQoKQoJcmV0dXJuCkBzbmlwcGV0X2VuZAoKQHNuaXBwZXRfc3RhcnQoY2FuY2VsX291dF92MiwgJGJhZF92YWx1ZSkKaWYgdGVzdCA9PSAkYmFkX3ZhbHVlOgoJcmVzZXQoKQoJcmV0dXJuCkBzbmlwcGV0X2VuZAoKQHNuaXBwZXRfc3RhcnQobnVtYmVyc194eXosICR4LCAkeSwgJHopCiR4ICogJHggKiAkeCArICR5ICsgJHoKQHNuaXBwZXRfZW5kCgoKZnVuYyBkb19zdHVmZih0ZXN0KToKCSEhY2FuY2VsX291dCgpCgkhIWNhbmNlbF9vdXRfdjIoLTk5OSkKCXByaW50KCEhbnVtYmVyc194eXooNSwgOCwgOSkpCgkKZnVuYyBub3JtYWxfZnVuYygpOgoJcHJpbnQoInRoZSBlbmQiKQoJCgo=",
-                ("--output_file_path"),
-                ("/home/golden/Documents/programming/prs/godot/compiler_output.gd"),
-            ]
-            args = parser.parse_args(testing_args)
-        else:
-            args = parser.parse_args()
+        parser.add_argument("macros", type=bool, nargs="?")
+        args = parser.parse_args()
         output_file = args.output_file_path if args.output_file_path else (args.input_file_path + ".processed")
         if args.base64_input_string:
             data = args.base64_input_string
@@ -148,14 +169,22 @@ if __name__ == "__main__":
                 data = f.read()
         if IN_DEBUG:
             print(data)
-        runner = MacroRunner(data)
-        lines_with_replacements_done = runner.get_processed_lines()
+        runner = MacroRunner(data, args.input_file_path)
+        runner.calculate_processed_lines()
+        lines_with_replacements_done = runner.get_final_output_lines()
+        if "macros" in sys.argv:
+            runner.show_snippets()
+            exit()
 
         with open(output_file, "w") as f:
-            print("#", args, file=f)
-            print("#", sys.argv, file=f)
-            for line in lines_with_replacements_done:
-                print(line, file=f)
+            # print("#", args, file=f)
+            # print("#", sys.argv, file=f)
+            if runner.errors:
+                for line in runner.errors:
+                    print(line, file=f)
+            else:
+                for line in lines_with_replacements_done:
+                    print(line, file=f)
         # print("#", args)
         # print("#", sys.argv)
         for line in lines_with_replacements_done:
@@ -163,5 +192,5 @@ if __name__ == "__main__":
     except Exception:
         to_show = traceback.format_exc()
         print(to_show)
-        # with open(output_file) as crash_file:
-        #     crash_file.write(to_show)
+        with open(output_file, "w") as crash_file:
+            crash_file.write(to_show)

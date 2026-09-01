@@ -448,15 +448,25 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
-String GDScriptParser::preprocess(const String &p_source_code) const {
-	List<String> args;
+String GDScriptParser::preprocess(const String &p_script_path) {
 	String pipe;
-	args.push_back("/home/golden/Documents/programming/prs/godot/preprocess_macro.py");
-	args.push_back("--output_file_path");
-	args.push_back("/home/golden/Documents/programming/prs/godot/compiler_output.gd");
-	args.push_back("--base64_input_string");
-	args.push_back(CoreBind::Marshalls::get_singleton()->utf8_to_base64(p_source_code));
-	Error err = OS::get_singleton()->execute("/usr/bin/python", args, &pipe, nullptr, true);
+	const String input_file_path_keyword = "@INPUT_FILE_PATH";
+	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess");
+	if (command_parts.is_empty()) {
+		return "NONE";
+	}
+	String first_arg = command_parts.get(0);
+	command_parts.remove_at(0);
+	List<String> args;
+	for (const String &arg : command_parts) {
+		if (arg == input_file_path_keyword) {
+			args.push_back(ProjectSettings::get_singleton()->globalize_path(p_script_path));
+			continue;
+		}
+		args.push_back(arg);
+	}
+
+	Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
 	if (err != OK) {
 		return "";
 	}
@@ -466,7 +476,10 @@ String GDScriptParser::preprocess(const String &p_source_code) const {
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String source = preprocess(p_source_code);
+	String source = preprocess(p_script_path);
+	if (source == "NONE") {
+		source = p_source_code;
+	}
 	int cursor_line = -1;
 	int cursor_column = -1;
 	for_completion = p_for_completion;
