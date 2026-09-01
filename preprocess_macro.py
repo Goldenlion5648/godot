@@ -26,7 +26,7 @@ class SnippetData:
         self.file_defined_in = file_defined_in
 
     def get_content_with_values_inserted(self, arg_values):
-        default_macros_to_lamba = {"$LINE_NUM": lambda: str(len(self.output) + 1)}
+        default_macros_to_lamba = {"$LINE_NUM": lambda: str(len(runner.output) + 1)}
         param_name_to_value = dict(zip(self.param_names, arg_values))
         for default, func in default_macros_to_lamba.items():
             param_name_to_value[default] = func()
