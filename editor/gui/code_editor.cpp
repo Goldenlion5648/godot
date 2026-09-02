@@ -1619,9 +1619,23 @@ Point2i CodeTextEditor::get_error_pos() const {
 Point2i CodeTextEditor::get_pos_for_display(Point2i p_internal_position) const {
 	const String line_text = text_editor->get_line(p_internal_position.x);
 	const int indent_size = text_editor->get_indent_size();
+	const String comment_from_macro = "#SOURCE_LINE:";
+	const String insert_macro_indicator = "!!";
+	if (line_text.contains(comment_from_macro)) {
+		int pos_of_line_number_in_comment = line_text.find(comment_from_macro) + comment_from_macro.length();
+		int line_before_macro = line_text.substr(pos_of_line_number_in_comment).to_int();
+		int macro_start_col = 0;
+		if (line_text.contains(comment_from_macro)) {
+			macro_start_col = line_text.find(insert_macro_indicator);
+		}
+		return Point2(line_before_macro + 1, macro_start_col);
+	}
 
 	int corrected_column = 0;
 	for (int i = 0; i < p_internal_position.y; i++) {
+		if (i >= line_text.length()) {
+			break;
+		}
 		if (line_text[i] == '\t') {
 			corrected_column += indent_size - (corrected_column % indent_size);
 		} else {

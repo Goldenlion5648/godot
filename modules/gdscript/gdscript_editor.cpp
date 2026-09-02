@@ -41,11 +41,13 @@
 #endif
 
 #include "core/config/engine.h"
+#include "core/core_bind.h"
 #include "core/core_constants.h"
 #include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 #include "core/math/expression.h"
 #include "core/object/class_db.h"
+#include "core/os/os.h"
 #include "core/string/regex.h"
 #include "core/variant/container_type_validate.h"
 
@@ -167,11 +169,28 @@ static void get_function_names_recursively(const GDScriptParser::ClassNode *p_cl
 	}
 }
 
-bool GDScriptLanguage::validate(const String &p_script, const String &p_path, List<String> *r_functions, List<ScriptLanguage::ScriptError> *r_errors, List<ScriptLanguage::Warning> *r_warnings, HashSet<int> *r_safe_lines) const {
+int GDScriptEditorLanguage::get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const {
+	const String comment_from_macro = "#SOURCE_LINE:";
+	// const String insert_macro_indicator = "!!";
+	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed);
+	if (line_text.contains(comment_from_macro)) {
+		int pos_of_line_number_in_comment = line_text.find(comment_from_macro) + comment_from_macro.length();
+		int line_with_macro_insertion = line_text.substr(pos_of_line_number_in_comment).to_int();
+		// int macro_start_col = 0;
+		// if (line_text.contains(comment_from_macro)) {
+		// 	macro_start_col = line_text.find(insert_macro_indicator);
+		// }
+		return line_with_macro_insertion - 1;
+	}
+	return p_line_num_in_processed;
+}
+
+bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_path, List<ScriptError> *r_errors, List<Warning> *r_warnings, List<String> *r_functions, HashSet<int> *r_safe_lines) const {
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	Error err = parser.parse(p_script, p_path, false);
+	String preprocessed_source_code = GDScriptParser::preprocess(p_path);
+	Error err = parser.parse(preprocessed_source_code, p_path, false);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
@@ -196,9 +215,9 @@ bool GDScriptLanguage::validate(const String &p_script, const String &p_path, Li
 			for (const GDScriptParser::ParserError &pe : parser.get_errors()) {
 				ScriptLanguage::ScriptError e;
 				e.path = p_path;
-				e.start_line = pe.start_line;
+				e.start_line = get_line_number_in_original_source(preprocessed_source_code, pe.start_line);
 				e.start_column = pe.start_column;
-				e.end_line = pe.end_line;
+				e.end_line = get_line_number_in_original_source(preprocessed_source_code, pe.start_line);
 				e.end_column = pe.end_column;
 				e.message = pe.message;
 				r_errors->push_back(e);
@@ -3985,7 +4004,7 @@ void GDScriptEditorLanguage::format_code(String &r_code, uint32_t p_from_line, u
 	}
 }
 
-static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, EditorLanguage::LookupResult &r_result) {
+static Error _lookup_symbol_from_base_og(const GDScriptParser::DataType &p_base, const String &p_symbol, EditorLanguage::LookupResult &r_result) {
 	GDScriptParser::DataType base_type = p_base;
 
 	while (true) {
@@ -4335,6 +4354,38 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	return ERR_CANT_RESOLVE;
 }
 
+static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, const String &p_symbol, EditorLanguage::LookupResult &r_result) {
+	Error error_found = _lookup_symbol_from_base_og(p_base, p_symbol, r_result);
+
+	// Gets the line number from before processing
+	HashMap<int, int> line_after_to_line_before;
+	// HashMap<int, int> snippet_name_to_source_line;
+	String processed = GDScriptParser::preprocess(r_result.script_path);
+	Vector<String> processed_lines = processed.split("\n");
+	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
+	const String MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:";
+	const String MACRO_NAME_AND_DEFINED_DELIMETER = ">";
+
+	for (int i = 0; i < processed_lines.size(); i++) {
+		String cur_line = processed_lines.get(i);
+		int source_comment_pos = cur_line.rfind(SOURCE_LINE_COMMENT);
+		if (source_comment_pos != -1) {
+			int og_line = cur_line.substr(source_comment_pos + SOURCE_LINE_COMMENT.length()).to_int();
+			line_after_to_line_before[i] = og_line - 1;
+		}
+		if (cur_line.begins_with("#" + p_symbol + MACRO_NAME_AND_DEFINED_DELIMETER)) {
+			r_result.location = cur_line.substr(cur_line.rfind(MACRO_DEFINED_AT_COMMENT)).to_int();
+			return OK;
+		}
+	}
+
+	if (r_result.location != -1) {
+		r_result.location = line_after_to_line_before[r_result.location];
+		return OK;
+	}
+	return error_found;
+}
+
 ::Error GDScriptEditorLanguage::lookup_code(const String &p_code, const String &p_symbol, const String &p_path, Object *p_owner, LookupResult &r_result) {
 	// Before parsing, try the usual stuff.
 	if (GDScriptAnalyzer::class_exists(p_symbol)) {
@@ -4510,7 +4561,9 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 					suite = suite->parent_block;
 				}
 			}
-
+			if (r_result.script_path == "") {
+				r_result.script_path = p_path;
+			}
 			if (_lookup_symbol_from_base(base_type, p_symbol, r_result) == OK) {
 				return OK;
 			}
@@ -4675,6 +4728,18 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 		} break;
 		default: {
 		}
+	}
+
+	const String SNIPPET_START_INDICATOR_WITH_AT_SIGN = "@snippet_start";
+	int i = 0;
+	// String processed = GDScriptParser::preprocess(p_code);
+	for (const String &line : p_code.split("\n")) {
+		if (line.begins_with(SNIPPET_START_INDICATOR_WITH_AT_SIGN) && line.substr(SNIPPET_START_INDICATOR_WITH_AT_SIGN.length(), p_symbol.length()) == p_symbol) {
+			r_result.location = i;
+			r_result.script_path = p_path;
+			return OK;
+		}
+		i += 1;
 	}
 
 	return ERR_CANT_RESOLVE;

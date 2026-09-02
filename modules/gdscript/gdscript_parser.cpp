@@ -34,9 +34,11 @@
 #include "gdscript_tokenizer_buffer.h"
 
 #include "core/config/project_settings.h"
+#include "core/core_bind.h"
 #include "core/io/resource_loader.h"
 #include "core/math/math_defs.h"
 #include "core/object/class_db.h"
+#include "core/os/os.h"
 #include "scene/main/multiplayer_api.h"
 
 #ifdef DEBUG_ENABLED
@@ -446,10 +448,38 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
+String GDScriptParser::preprocess(const String &p_script_path) {
+	String pipe;
+	const String input_file_path_keyword = "@INPUT_FILE_PATH";
+	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess");
+	if (command_parts.is_empty()) {
+		return "NONE";
+	}
+	String first_arg = command_parts.get(0);
+	command_parts.remove_at(0);
+	List<String> args;
+	for (const String &arg : command_parts) {
+		if (arg == input_file_path_keyword) {
+			args.push_back(ProjectSettings::get_singleton()->globalize_path(p_script_path));
+			continue;
+		}
+		args.push_back(arg);
+	}
+
+	Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
+	if (err != OK) {
+		return "";
+	}
+	return pipe;
+}
+
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String source = p_source_code;
+	String source = preprocess(p_script_path);
+	if (source == "NONE") {
+		source = p_source_code;
+	}
 	int cursor_line = -1;
 	int cursor_column = -1;
 	for_completion = p_for_completion;
