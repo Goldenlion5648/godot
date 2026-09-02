@@ -1,5 +1,4 @@
 import argparse
-import base64
 import re
 import sys
 import traceback
@@ -10,24 +9,40 @@ INSERT_SNIPPET_SYMBOL = "!!"
 SOURCE_LINE_COMMENT = "##SOURCE_LINE:"
 MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:"
 MACRO_NAME_AND_DEFINED_DELIMETER = ">"
+OPERATE_ON_EACH_LINE_WITH_AT_SIGN = "@each"
 
 
 def get_params_from(to_read: str):
-    to_read = to_read.removeprefix("(").removesuffix(")")
-    return re.split(r",\s+", to_read)
+    # print()
+    # print(to_read)
+    part_in_parenthesis = re.search(r"\((.+)\)", to_read)
+    # print(part_in_parenthesis)
+    # print(part_in_parenthesis.group(1))
+    if not part_in_parenthesis:
+        return ["XXX"]
+    to_read = part_in_parenthesis.group(1)
+    # to_read = to_read.removeprefix("(").removesuffix(")")
+    return re.split(r",\s*", to_read)
 
 
 class SnippetData:
-    def __init__(self, name, lines, param_names, defined_at_line_num, file_defined_in):
+    def __init__(self, name, lines, param_names, defined_at_line_num, file_defined_in, does_operate_on_each_line=False):
         self.name = name
         self.lines = lines
         self.param_names = param_names
         self.defined_at_line_num = defined_at_line_num
         self.file_defined_in = file_defined_in
+        self.does_operate_on_each_line = does_operate_on_each_line
 
-    def get_content_with_values_inserted(self, arg_values):
-        default_macros_to_lamba = {"$LINE_NUM": lambda: str(len(runner.output) + 1)}
+    def get_lines_with_values_inserted(self, arg_values):
+        default_macros_to_lamba = {
+            "$LINE_NUM": lambda: str(len(runner.output) + 1),
+            "$params": lambda: " ".join(arg_values),
+        }
+        print("self.param_names", self.param_names)
+        print("arg_values", arg_values)
         param_name_to_value = dict(zip(self.param_names, arg_values))
+        print("param_name_to_value", param_name_to_value)
         for default, func in default_macros_to_lamba.items():
             param_name_to_value[default] = func()
         ret = "\n".join(self.lines)
@@ -43,15 +58,22 @@ class SnippetData:
     def __repr__(self):
         params_joined = " ".join(self.param_names)
         lines_joined = "\n".join(self.lines)
-        return f"NAME: {self.name}\nPARAMS: {params_joined}\nLINES:\n{lines_joined}\nDEFINED_AT:{self.defined_at_line_num}\n"
+        return f"""NAME: {self.name}
+PARAMS: {params_joined}
+LINES:
+{lines_joined}
+DEFINED_AT:{self.defined_at_line_num}
+RUNS ON EACH LINE:{self.does_operate_on_each_line}
+
+"""
 
 
 class MacroRunner:
-    def __init__(self, data, file_name_with_dot_gd):
+    def __init__(self, data: str, file_name_with_dot_gd: str):
         self.line_num = 0
         self.file_name_with_dot_gd = file_name_with_dot_gd
-        self.output = []
-        self.errors = []
+        self.output: list[str] = []
+        self.errors: list[str] = []
         self.data = data
         self.snippet_name_to_data: dict[str, SnippetData] = {}
 
@@ -69,67 +91,83 @@ class MacroRunner:
             print(snippet_data)
 
     def calculate_processed_lines(self):
-        lines = data.splitlines()
-        if INSERT_SNIPPET_SYMBOL not in data:
+        lines = self.data.splitlines()
+        if INSERT_SNIPPET_SYMBOL not in self.data:
             return lines
         self.line_num = 0
         self.output = []
         while self.line_num < len(lines):
             line = lines[self.line_num]
+            is_normal_snippet = line.startswith(SNIPPET_START_INDICATOR_WITH_AT_SIGN)
+            is_an_each_line = line.startswith(OPERATE_ON_EACH_LINE_WITH_AT_SIGN)
             # finds the macro definition
-            if line.startswith(SNIPPET_START_INDICATOR_WITH_AT_SIGN):
-                params = get_params_from(line.removeprefix(SNIPPET_START_INDICATOR_WITH_AT_SIGN))
+            if is_normal_snippet or is_an_each_line:
+                params = get_params_from(line)
                 snippet_name = params.pop(0)
                 self.add_to_output(f"# started {snippet_name}")
                 self.line_num += 1
                 line = lines[self.line_num]
                 snippet_lines = []
                 snippet_starting_line = self.line_num
-                while not line.startswith("@snippet_end"):
+                while not line.startswith("@snippet_end") and not line.startswith("@each_end"):
                     snippet_lines.append(line)
                     self.add_to_output(f"# ate part of snippet {snippet_name}")
                     self.line_num += 1
                     line = lines[self.line_num]
                 cur_snippet_data = SnippetData(
-                    snippet_name, snippet_lines, params, snippet_starting_line, self.file_name_with_dot_gd
+                    snippet_name,
+                    snippet_lines,
+                    params,
+                    snippet_starting_line,
+                    self.file_name_with_dot_gd,
+                    is_an_each_line,
                 )
                 self.snippet_name_to_data[snippet_name] = cur_snippet_data
                 # print("added snippet:\n", cur_snippet_data)
                 self.add_to_output(f"# ended snippet {snippet_name}")
             else:
                 # insert the macro
-                should_insert_whitespace_prefix = True
-                had_snippet_to_insert_into = False
-                col = 0
-                line_starting_whitespace = found.group() if (found := re.search(r"^\s+", line)) is not None else ""
-                while col < len(line):
-                    if col + 1 < len(line) and line[col : col + len(INSERT_SNIPPET_SYMBOL)] == INSERT_SNIPPET_SYMBOL:
-                        part_before_snippet = line[:col]
-                        col += len(INSERT_SNIPPET_SYMBOL)
-                        had_snippet_to_insert_into = True
-                        snippet_name = re.search(r"\w+", line[col:]).group()
-                        col += len(snippet_name)
-                        arg_values = get_params_from(line[col:])
-                        if snippet_name not in self.snippet_name_to_data:
-                            self.errors.append(f"Unknown macro: '{snippet_name}'")
-                            break
-                        cur_snippet_data_for_insertion = self.snippet_name_to_data[snippet_name]
-                        lines_with_values = cur_snippet_data_for_insertion.get_content_with_values_inserted(arg_values)
-                        if should_insert_whitespace_prefix:
-                            lines_with_values = [line_starting_whitespace + line for line in lines_with_values]
-                        else:
-                            lines_with_values[0] = part_before_snippet + lines_with_values[0]
-                            # lines_with_values = [part_before_snippet + line for line in lines_with_values]
-                        for found_line in lines_with_values:
-                            self.add_to_output(found_line)
-
-                    if not line[col].isspace():
-                        should_insert_whitespace_prefix = False
-
-                    col += 1
-
-                if not had_snippet_to_insert_into:
+                pos_for_insert = line.find(INSERT_SNIPPET_SYMBOL)
+                if pos_for_insert == -1:
                     self.add_to_output(f"{line}")
+                    self.line_num += 1
+                    continue
+                line_starting_whitespace = found.group() if (found := re.search(r"^\s+", line)) is not None else ""
+                part_before_snippet = line[:pos_for_insert]
+                snippet_name = re.search(r"\w+", line[pos_for_insert + len(INSERT_SNIPPET_SYMBOL) :]).group()
+                if snippet_name not in self.snippet_name_to_data:
+                    self.errors.append(f"Unknown macro: '{snippet_name}'")
+                    break
+                cur_snippet = self.snippet_name_to_data[snippet_name]
+                print(cur_snippet_data)
+                if cur_snippet.does_operate_on_each_line:
+                    self.line_num += 1
+                    lines_with_values = []
+                    while self.line_num < len(lines) and not lines[self.line_num].startswith("!!end"):
+                        arg_values = lines[self.line_num].split()
+                        print(arg_values)
+                        lines_with_values.extend(cur_snippet.get_lines_with_values_inserted(arg_values))
+                        self.line_num += 1
+                else:
+                    arg_values = get_params_from(line)
+                    lines_with_values = cur_snippet.get_lines_with_values_inserted(arg_values)
+                    if pos_for_insert > 0:
+                        lines_with_values = [line_starting_whitespace + line for line in lines_with_values]
+                    else:
+                        # it was a single line snippet like !!compute_equation
+                        lines_with_values[0] = part_before_snippet + lines_with_values[0]
+
+                    # lines_with_values = [part_before_snippet + line for line in lines_with_values]
+                for found_line in lines_with_values:
+                    self.add_to_output(found_line)
+
+                # if not line[col].isspace():
+                #     should_insert_whitespace_prefix = False
+
+                # col += 1
+
+                # if not found_snippet_to_insert_into:
+                #     self.add_to_output(f"{line}")
             self.line_num += 1
 
 
@@ -161,15 +199,15 @@ if __name__ == "__main__":
         parser.add_argument("macros", type=bool, nargs="?")
         args = parser.parse_args()
         output_file = args.output_file_path if args.output_file_path else (args.input_file_path + ".processed")
-        if args.base64_input_string:
-            data = args.base64_input_string
-            data = base64.b64decode(data).decode()
-        else:
-            with open(args.input_file_path) as f:
-                data = f.read()
+        # if args.base64_input_string:
+        #     data = args.base64_input_string
+        #     data = base64.b64decode(data).decode()
+        # else:
+        with open(args.input_file_path) as f:
+            data_read = f.read()
         if IN_DEBUG:
-            print(data)
-        runner = MacroRunner(data, args.input_file_path)
+            print(data_read)
+        runner = MacroRunner(data_read, args.input_file_path)
         runner.calculate_processed_lines()
         lines_with_replacements_done = runner.get_final_output_lines()
         if "macros" in sys.argv:
