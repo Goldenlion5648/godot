@@ -470,7 +470,8 @@ String GDScriptParser::preprocess(const String &p_script_path) {
 	if (err != OK) {
 		return "";
 	}
-	return pipe;
+	String processed_code = GDScriptCache::get_source_code(p_script_path + ".processed");
+	return processed_code;
 }
 
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {

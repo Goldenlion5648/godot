@@ -39,10 +39,10 @@ class SnippetData:
             "$LINE_NUM": lambda: str(len(runner.output) + 1),
             "$params": lambda: " ".join(arg_values),
         }
-        print("self.param_names", self.param_names)
-        print("arg_values", arg_values)
+        # print("self.param_names", self.param_names)
+        # print("arg_values", arg_values)
         param_name_to_value = dict(zip(self.param_names, arg_values))
-        print("param_name_to_value", param_name_to_value)
+        # print("param_name_to_value", param_name_to_value)
         for default, func in default_macros_to_lamba.items():
             param_name_to_value[default] = func()
         ret = "\n".join(self.lines)
@@ -139,7 +139,6 @@ class MacroRunner:
                     self.errors.append(f"Unknown macro: '{snippet_name}'")
                     break
                 cur_snippet = self.snippet_name_to_data[snippet_name]
-                print(cur_snippet_data)
                 if cur_snippet.does_operate_on_each_line:
                     self.line_num += 1
                     lines_with_values = []

@@ -171,6 +171,22 @@ static void get_function_names_recursively(const GDScriptParser::ClassNode *p_cl
 	}
 }
 
+int GDScriptEditorLanguage::get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const {
+	const String comment_from_macro = "#SOURCE_LINE:";
+	// const String insert_macro_indicator = "!!";
+	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed);
+	if (line_text.contains(comment_from_macro)) {
+		int pos_of_line_number_in_comment = line_text.find(comment_from_macro) + comment_from_macro.length();
+		int line_with_macro_insertion = line_text.substr(pos_of_line_number_in_comment).to_int();
+		// int macro_start_col = 0;
+		// if (line_text.contains(comment_from_macro)) {
+		// 	macro_start_col = line_text.find(insert_macro_indicator);
+		// }
+		return line_with_macro_insertion - 1;
+	}
+	return p_line_num_in_processed;
+}
+
 bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_path, List<ScriptError> *r_errors, List<Warning> *r_warnings, List<String> *r_functions, HashSet<int> *r_safe_lines) const {
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
