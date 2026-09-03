@@ -1394,7 +1394,7 @@ void ScriptTextEditor::_show_symbol_tooltip(const String &p_symbol, int p_row, i
 	if (enable_diagnostics) {
 		// Look for any errors that include this location.
 		PackedStringArray error_strings;
-		for (const ScriptLanguage::ScriptError &e : errors) {
+		for (const EditorLanguage::ScriptError &e : errors) {
 			if (_is_line_col_in_range(p_row + 1, p_column + 1, e.start_line, e.start_column, e.end_line, e.end_column)) {
 				error_strings.append(e.message);
 			}
@@ -1402,7 +1402,7 @@ void ScriptTextEditor::_show_symbol_tooltip(const String &p_symbol, int p_row, i
 
 		// Look for any warnings that include this location.
 		PackedStringArray warning_strings;
-		for (const ScriptLanguage::Warning &w : warnings) {
+		for (const EditorLanguage::Warning &w : warnings) {
 			if (_is_line_col_in_range(p_row + 1, p_column + 1, w.start_line, w.start_column, w.end_line, w.end_column)) {
 				warning_strings.append(vformat("(%s): %s", w.string_code, w.message));
 			}
