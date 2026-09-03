@@ -449,7 +449,7 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 }
 
 String GDScriptParser::preprocess(const String &p_script_path) {
-	String pipe;
+	// String pipe;
 	const String input_file_path_keyword = "@INPUT_FILE_PATH";
 	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess");
 	if (command_parts.is_empty()) {
@@ -466,20 +466,45 @@ String GDScriptParser::preprocess(const String &p_script_path) {
 		args.push_back(arg);
 	}
 
-	Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
-	if (err != OK) {
-		return "";
-	}
-	String processed_code = GDScriptCache::get_source_code(p_script_path + ".processed");
+	// Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
+	OS::get_singleton()->execute_with_pipe(first_arg, args, false);
+	// if (err != OK) {
+	// 	return "";
+	// }
+	String processed_output_path = p_script_path + ".processed";
+	String processed_code = GDScriptCache::get_source_code(processed_output_path);
+	// This will be empty when the file doesn't exist.
 	return processed_code;
+}
+
+int GDScriptParser::get_line_before_to_after(const String &p_processed_code, int line_before_one_indexed) {
+	// TODO: add caching
+	// Gets the line number from before processing
+	HashMap<int, int> line_before_to_after;
+	Vector<String> processed_lines = p_processed_code.split("\n");
+	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
+	// const String MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:";
+	// const String MACRO_NAME_AND_DEFINED_DELIMETER = ">";
+
+	for (int i = 0; i < processed_lines.size(); i++) {
+		const String &cur_line = processed_lines[i];
+		int source_comment_pos = cur_line.rfind(SOURCE_LINE_COMMENT);
+		if (source_comment_pos != -1) {
+			int og_line = cur_line.substr(source_comment_pos + SOURCE_LINE_COMMENT.length()).to_int();
+			line_before_to_after[og_line] = i + 1;
+			// if (!line_before_to_after.has(og_line)) {
+			// }
+		}
+	}
+	return line_before_to_after[line_before_one_indexed];
 }
 
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String source = preprocess(p_script_path);
-	if (source == "NONE") {
-		source = p_source_code;
+	String processed_source = preprocess(p_script_path);
+	if (processed_source == "") {
+		processed_source = p_source_code;
 	}
 	int cursor_line = -1;
 	int cursor_column = -1;
@@ -508,14 +533,15 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 			cursor_column = 1;
 		}
 
-		source = source.replace_first(String::chr(0xFFFF), String());
+		// source = source.replace_first(String::chr(0xFFFF), String());
 	}
 
 	GDScriptTokenizerText *text_tokenizer = memnew(GDScriptTokenizerText);
-	text_tokenizer->set_source_code(source);
+	text_tokenizer->set_source_code(processed_source);
 
 	tokenizer = text_tokenizer;
-	tokenizer->set_cursor_position(cursor_line, cursor_column);
+	int line_num_in_processed = get_line_before_to_after(processed_source, cursor_line);
+	tokenizer->set_cursor_position(line_num_in_processed, cursor_column);
 
 	script_path = p_script_path.simplify_path();
 

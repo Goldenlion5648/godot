@@ -201,9 +201,9 @@ bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_pa
 		for (const GDScriptWarning &E : parser.get_warnings()) {
 			const GDScriptWarning &warn = E;
 			Warning w;
-			w.start_line = warn.start_line;
+			w.start_line = get_line_number_in_original_source(preprocessed_source_code, warn.start_line);
 			w.start_column = warn.start_column;
-			w.end_line = warn.end_line;
+			w.end_line = get_line_number_in_original_source(preprocessed_source_code, warn.end_line);
 			w.end_column = warn.end_column;
 			w.string_code = GDScriptWarning::get_name_from_code(warn.code);
 			w.message = warn.get_message();

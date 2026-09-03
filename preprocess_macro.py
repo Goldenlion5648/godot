@@ -93,7 +93,7 @@ class MacroRunner:
     def calculate_processed_lines(self):
         lines = self.data.splitlines()
         if INSERT_SNIPPET_SYMBOL not in self.data:
-            return lines
+            self.output = lines
         self.line_num = 0
         self.output = []
         while self.line_num < len(lines):
@@ -144,7 +144,7 @@ class MacroRunner:
                     lines_with_values = []
                     while self.line_num < len(lines) and not lines[self.line_num].startswith("!!end"):
                         arg_values = lines[self.line_num].split()
-                        print(arg_values)
+                        # print(arg_values)
                         lines_with_values.extend(cur_snippet.get_lines_with_values_inserted(arg_values))
                         self.line_num += 1
                 else:
@@ -224,8 +224,9 @@ if __name__ == "__main__":
                     print(line, file=f)
         # print("#", args)
         # print("#", sys.argv)
-        for line in lines_with_replacements_done:
-            print(line)
+        if IN_DEBUG:
+            for line in lines_with_replacements_done:
+                print(line)
     except Exception:
         to_show = traceback.format_exc()
         print(to_show)
