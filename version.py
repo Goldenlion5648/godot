@@ -1,9 +1,9 @@
 short_name = "godot"
 name = "Godot Engine Think"
 major = 4
-minor = 8
+minor = 7
 patch = 0
-status = "mychanges729"
+status = "mychanges9_03"
 module_config = ""
 website = "https://godotengine.org"
 docs = "latest"
