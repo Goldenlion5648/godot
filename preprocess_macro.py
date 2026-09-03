@@ -78,7 +78,8 @@ class MacroRunner:
         self.snippet_name_to_data: dict[str, SnippetData] = {}
 
     def get_final_output_lines(self):
-        return self.output + self.get_macro_lines()
+        this_was_an_output_notice = ["##THIS WAS AUTO GENERATED"]
+        return self.output + self.get_macro_lines() + this_was_an_output_notice
 
     def get_macro_lines(self):
         return [data.get_definition_print_out() for data in self.snippet_name_to_data.values()]
