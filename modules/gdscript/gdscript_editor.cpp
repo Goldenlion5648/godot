@@ -174,15 +174,15 @@ static void get_function_names_recursively(const GDScriptParser::ClassNode *p_cl
 int GDScriptEditorLanguage::get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const {
 	const String comment_from_macro = "#SOURCE_LINE:";
 	// const String insert_macro_indicator = "!!";
-	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed);
+	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed - 1);
 	if (line_text.contains(comment_from_macro)) {
-		int pos_of_line_number_in_comment = line_text.find(comment_from_macro) + comment_from_macro.length();
+		int pos_of_line_number_in_comment = line_text.rfind(comment_from_macro) + comment_from_macro.length();
 		int line_with_macro_insertion = line_text.substr(pos_of_line_number_in_comment).to_int();
 		// int macro_start_col = 0;
 		// if (line_text.contains(comment_from_macro)) {
 		// 	macro_start_col = line_text.find(insert_macro_indicator);
 		// }
-		return line_with_macro_insertion - 1;
+		return line_with_macro_insertion;
 	}
 	return p_line_num_in_processed;
 }
@@ -191,7 +191,7 @@ bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_pa
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	String preprocessed_source_code = GDScriptParser::preprocess(p_path);
+	String preprocessed_source_code = GDScriptParser::preprocess(p_path, p_script);
 	Error err = parser.parse(preprocessed_source_code, p_path, false);
 	if (err == OK) {
 		err = analyzer.analyze();
@@ -4361,9 +4361,11 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	Error error_found = _lookup_symbol_from_base_og(p_base, p_symbol, r_result);
 
 	// Gets the line number from before processing
+	String processed = GDScriptParser::preprocess(r_result.script_path, "");
+	if (processed == "") {
+		return error_found;
+	}
 	HashMap<int, int> line_after_to_line_before;
-	// HashMap<int, int> snippet_name_to_source_line;
-	String processed = GDScriptParser::preprocess(r_result.script_path);
 	Vector<String> processed_lines = processed.split("\n");
 	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
 	const String MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:";
@@ -4733,11 +4735,11 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 		}
 	}
 
-	const String SNIPPET_START_INDICATOR_WITH_AT_SIGN = "@snippet_start";
+	// Allow going to snippet definitions.
+	const String SNIPPET_START_INDICATOR_AT_SIGN_ONLY = "@";
 	int i = 0;
-	// String processed = GDScriptParser::preprocess(p_code);
 	for (const String &line : p_code.split("\n")) {
-		if (line.begins_with(SNIPPET_START_INDICATOR_WITH_AT_SIGN) && line.substr(SNIPPET_START_INDICATOR_WITH_AT_SIGN.length(), p_symbol.length()) == p_symbol) {
+		if (line.begins_with(SNIPPET_START_INDICATOR_AT_SIGN_ONLY) && line.contains(p_symbol)) {
 			r_result.location = i;
 			r_result.script_path = p_path;
 			return OK;

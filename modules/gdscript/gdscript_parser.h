@@ -53,6 +53,7 @@
 
 class GDScriptParser {
 	struct AnnotationInfo;
+	static Dictionary running_processes_dict;
 
 public:
 	// Forward-declare all parser nodes, to avoid ordering issues.
@@ -1679,7 +1680,7 @@ public:
 	ClassNode *find_class(const String &p_qualified_name) const;
 	bool has_class(const GDScriptParser::ClassNode *p_class) const;
 	static Variant::Type get_builtin_type(const StringName &p_type); // Excluding `Variant::NIL` and `Variant::OBJECT`.
-	static String preprocess(const String &p_script_path);
+	static String preprocess(const String &p_script_path, const String &p_known_code);
 
 	CompletionContext get_completion_context() const { return completion_context; }
 	void get_annotation_list(List<MethodInfo> *r_annotations) const;

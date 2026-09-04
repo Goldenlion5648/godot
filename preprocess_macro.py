@@ -1,4 +1,6 @@
 import argparse
+import base64
+import os
 import re
 import sys
 import traceback
@@ -10,6 +12,11 @@ SOURCE_LINE_COMMENT = "##SOURCE_LINE:"
 MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:"
 MACRO_NAME_AND_DEFINED_DELIMETER = ">"
 OPERATE_ON_EACH_LINE_WITH_AT_SIGN = "@each"
+AUTO_GENERATED_MESSAGE = "##THIS WAS AUTO GENERATED"
+
+
+def get_traceback_message_formatted(error_name, text_with_error, line_num, col):
+    return f"Traceback: {error_name}: '{text_with_error}' ({line_num},{col})"
 
 
 def get_params_from(to_read: str):
@@ -17,9 +24,10 @@ def get_params_from(to_read: str):
     # print(to_read)
     part_in_parenthesis = re.search(r"\((.+)\)", to_read)
     # print(part_in_parenthesis)
+    # print(part_in_parenthesis)
     # print(part_in_parenthesis.group(1))
     if not part_in_parenthesis:
-        return ["XXX"]
+        return []
     to_read = part_in_parenthesis.group(1)
     # to_read = to_read.removeprefix("(").removesuffix(")")
     return re.split(r",\s*", to_read)
@@ -41,6 +49,11 @@ class SnippetData:
         }
         # print("self.param_names", self.param_names)
         # print("arg_values", arg_values)
+        if len(self.param_names) != len(arg_values):
+            runner.errors.append(
+                get_traceback_message_formatted("Wrong argument count", arg_values, runner.line_num, 0)
+            )
+            return []
         param_name_to_value = dict(zip(self.param_names, arg_values))
         # print("param_name_to_value", param_name_to_value)
         for default, func in default_macros_to_lamba.items():
@@ -78,7 +91,7 @@ class MacroRunner:
         self.snippet_name_to_data: dict[str, SnippetData] = {}
 
     def get_final_output_lines(self):
-        this_was_an_output_notice = ["##THIS WAS AUTO GENERATED"]
+        this_was_an_output_notice = [AUTO_GENERATED_MESSAGE]
         return self.output + self.get_macro_lines() + this_was_an_output_notice
 
     def get_macro_lines(self):
@@ -129,7 +142,7 @@ class MacroRunner:
             else:
                 # insert the macro
                 pos_for_insert = line.find(INSERT_SNIPPET_SYMBOL)
-                if pos_for_insert == -1:
+                if pos_for_insert == -1 or (-1 < line.find("#") < pos_for_insert):
                     self.add_to_output(f"{line}")
                     self.line_num += 1
                     continue
@@ -137,8 +150,13 @@ class MacroRunner:
                 part_before_snippet = line[:pos_for_insert]
                 snippet_name = re.search(r"\w+", line[pos_for_insert + len(INSERT_SNIPPET_SYMBOL) :]).group()
                 if snippet_name not in self.snippet_name_to_data:
-                    self.errors.append(f"Unknown macro: '{snippet_name}'")
-                    break
+                    self.errors.append(
+                        get_traceback_message_formatted(
+                            "Unknown macro:", snippet_name, self.line_num, pos_for_insert + len(INSERT_SNIPPET_SYMBOL)
+                        )
+                    )
+                    self.line_num += 1
+                    continue
                 cur_snippet = self.snippet_name_to_data[snippet_name]
                 if cur_snippet.does_operate_on_each_line:
                     self.line_num += 1
@@ -189,9 +207,11 @@ class MacroRunner:
 # with open(args.output_file_path, "w") as f:
 #     f.write("random")
 #     print("wrote to", args.output_file_path)
+
 if __name__ == "__main__":
     try:
-        IN_DEBUG = "test_mode" in sys.argv
+        IS_IN_DEBUG = "test_mode" in sys.argv
+        should_print = "print" in sys.argv
         parser = argparse.ArgumentParser()
         parser.add_argument("--input_file_path", type=str)
         parser.add_argument("--output_file_path", type=str)
@@ -199,35 +219,52 @@ if __name__ == "__main__":
         parser.add_argument("macros", type=bool, nargs="?")
         args = parser.parse_args()
         output_file = args.output_file_path if args.output_file_path else (args.input_file_path + ".processed")
-        # if args.base64_input_string:
-        #     data = args.base64_input_string
-        #     data = base64.b64decode(data).decode()
-        # else:
-        with open(args.input_file_path) as f:
-            data_read = f.read()
-        if IN_DEBUG:
+
+        # last_changed_time = -1000
+        # cur_changed_time = os.path.getmtime(args.input_file_path)
+        # if last_changed_time == cur_changed_time:
+        #     time.sleep(.01)
+        #     continue
+        # last_changed_time = cur_changed_time
+        if args.base64_input_string:
+            data_read = args.base64_input_string
+            data_read = base64.b64decode(data_read).decode()
+        else:
+            with open(args.input_file_path) as f:
+                data_read = f.read()
+        if IS_IN_DEBUG:
             print(data_read)
+        if AUTO_GENERATED_MESSAGE in data_read[-len(AUTO_GENERATED_MESSAGE) * 2 :]:
+            if IS_IN_DEBUG:
+                print("this was the auto genned output, skipping parsing")
+            # do not process the file again, they are looking at the auto genned version
+            exit()
         runner = MacroRunner(data_read, args.input_file_path)
         runner.calculate_processed_lines()
         lines_with_replacements_done = runner.get_final_output_lines()
         if "macros" in sys.argv:
             runner.show_snippets()
             exit()
-
-        with open(output_file, "w") as f:
-            # print("#", args, file=f)
-            # print("#", sys.argv, file=f)
-            if runner.errors:
+        errors_file = args.input_file_path + ".error"
+        if runner.errors:
+            with open(errors_file, "w") as f:
                 for line in runner.errors:
                     print(line, file=f)
-            else:
-                for line in lines_with_replacements_done:
-                    print(line, file=f)
-        # print("#", args)
-        # print("#", sys.argv)
-        if IN_DEBUG:
+                    print(line, file=sys.stderr)
+        else:
+            if os.path.exists(errors_file):
+                os.remove(errors_file)
+
+        if should_print:
             for line in lines_with_replacements_done:
                 print(line)
+            sys.stdout.close()
+
+        with open(output_file, "w") as f:
+            for line in lines_with_replacements_done:
+                print(line, file=f)
+        # print("#", args)
+        # print("#", sys.argv)
     except Exception:
         to_show = traceback.format_exc()
         print(to_show)

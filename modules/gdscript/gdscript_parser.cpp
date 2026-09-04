@@ -35,10 +35,12 @@
 
 #include "core/config/project_settings.h"
 #include "core/core_bind.h"
+#include "core/io/file_access.h"
 #include "core/io/resource_loader.h"
 #include "core/math/math_defs.h"
 #include "core/object/class_db.h"
 #include "core/os/os.h"
+#include "core/string/regex.h"
 #include "scene/main/multiplayer_api.h"
 
 #ifdef DEBUG_ENABLED
@@ -46,6 +48,7 @@
 #include "servers/text/text_server.h"
 #endif
 
+Dictionary GDScriptParser::running_processes_dict;
 // This function is used to determine that a type is "built-in" as opposed to native
 // and custom classes. So `Variant::NIL` and `Variant::OBJECT` are excluded:
 // `Variant::NIL` - `null` is literal, not a type.
@@ -448,35 +451,6 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
-String GDScriptParser::preprocess(const String &p_script_path) {
-	// String pipe;
-	const String input_file_path_keyword = "@INPUT_FILE_PATH";
-	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess");
-	if (command_parts.is_empty()) {
-		return "NONE";
-	}
-	String first_arg = command_parts.get(0);
-	command_parts.remove_at(0);
-	List<String> args;
-	for (const String &arg : command_parts) {
-		if (arg == input_file_path_keyword) {
-			args.push_back(ProjectSettings::get_singleton()->globalize_path(p_script_path));
-			continue;
-		}
-		args.push_back(arg);
-	}
-
-	// Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
-	OS::get_singleton()->execute_with_pipe(first_arg, args, false);
-	// if (err != OK) {
-	// 	return "";
-	// }
-	String processed_output_path = p_script_path + ".processed";
-	String processed_code = GDScriptCache::get_source_code(processed_output_path);
-	// This will be empty when the file doesn't exist.
-	return processed_code;
-}
-
 int GDScriptParser::get_line_before_to_after(const String &p_processed_code, int line_before_one_indexed) {
 	// TODO: add caching
 	// Gets the line number from before processing
@@ -499,12 +473,80 @@ int GDScriptParser::get_line_before_to_after(const String &p_processed_code, int
 	return line_before_to_after[line_before_one_indexed];
 }
 
+String GDScriptParser::preprocess(const String &p_script_path, const String &p_known_code) {
+#ifndef TOOLS_ENABLED
+	return p_known_code;
+#endif
+	// start the preprocessor if it does not exist
+	// if (current_preprocess_dict.is_empty() || !current_preprocess_dict.has("pid") || !OS::get_singleton()->is_process_running(current_preprocess_dict.get("pid", 0))) {
+	const String input_file_path_keyword = "@INPUT_FILE_PATH";
+	const String input_data_as_base64_keyword = "@INPUT_DATA_BASE64";
+	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess_command_parts");
+	bool should_preprocess = ProjectSettings::get_singleton()->get_setting("application/config/should_preprocess");
+	if (command_parts.is_empty() || !should_preprocess) {
+		// This is handled at the calling site
+		return p_known_code;
+	}
+	String first_arg = command_parts.get(0);
+	command_parts.remove_at(0);
+	List<String> args;
+	bool is_using_base64_input = false;
+	for (const String &arg : command_parts) {
+		if (arg == input_file_path_keyword) {
+			args.push_back(ProjectSettings::get_singleton()->globalize_path(p_script_path));
+		} else if (arg == input_data_as_base64_keyword) {
+			args.push_back(CoreBind::Marshalls::get_singleton()->utf8_to_base64(p_known_code));
+			// is_using_base64_input = true;
+		} else {
+			args.push_back(arg);
+		}
+	}
+
+	// String pipe;
+	// Error err = OS::get_singleton()->execute(first_arg, args, &pipe, nullptr, true);
+	// 	Dictionary* first_inserted = running_processes_dict.next(nullptr);
+	// 	OS::get_singleton()->kill(first_inserted["pid"]);
+	// 	running_processes_dict.erase(first_inserted["pid"]);
+	// }
+	Dictionary newest = OS::get_singleton()->execute_with_pipe(first_arg, args, false);
+	// if (!running_processes_dict.has(p_script_path)) {
+	// 	running_processes_dict[p_script_path] = newest;
+	// // running_processes_dict[newest["pid"]] = newest;
+	// }
+
+	String processed_output_path = p_script_path + ".processed";
+	String errors_path = p_script_path + ".error";
+	if (FileAccess::exists(errors_path)) {
+		Ref<FileAccess> errors_reader = FileAccess::open(errors_path, FileAccess::READ);
+		return errors_reader->get_as_text();
+	}
+
+	// return pipe;
+
+	Ref<FileAccess> processed_code_reader = FileAccess::open(processed_output_path, FileAccess::READ);
+	String processed_code = processed_code_reader->get_as_text();
+	// This will be empty when the file doesn't exist.
+	return processed_code;
+}
+
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String processed_source = preprocess(p_script_path);
-	if (processed_source == "") {
-		processed_source = p_source_code;
+	String processed_source = preprocess(p_script_path, p_source_code);
+	if (processed_source.begins_with("Traceback")) {
+		int line_num_start_pos = processed_source.rfind("(") + 1;
+		int num_digits_in_line = processed_source.rfind(",") - line_num_start_pos;
+		int line_with_error = processed_source.substr(line_num_start_pos, num_digits_in_line).to_int() + 1;
+		int starting_col_with_error = processed_source.substr(processed_source.rfind(",") + 1).to_int() + 1;
+		// For now we assume that the macro was not recognized.
+		RegEx in_quotes_regex = RegEx("'(.+?)'");
+		Ref<RegExMatch> result = in_quotes_regex.search(processed_source);
+		int ending_col_with_error = starting_col_with_error;
+		if (result.is_valid()) {
+			String unknown_word = result->get_string(1);
+			ending_col_with_error = starting_col_with_error + unknown_word.length();
+		}
+		push_error(processed_source, line_with_error, starting_col_with_error, line_with_error, ending_col_with_error);
 	}
 	int cursor_line = -1;
 	int cursor_column = -1;
