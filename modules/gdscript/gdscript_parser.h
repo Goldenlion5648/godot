@@ -1671,7 +1671,6 @@ private:
 
 public:
 	Error parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body = true);
-	int get_line_before_to_after(const String &p_processed_code, int line_before);
 	Error parse_binary(const Vector<uint8_t> &p_binary, const String &p_script_path);
 	ClassNode *get_tree() const { return head; }
 	bool is_tool() const { return _is_tool; }
@@ -1681,6 +1680,10 @@ public:
 	bool has_class(const GDScriptParser::ClassNode *p_class) const;
 	static Variant::Type get_builtin_type(const StringName &p_type); // Excluding `Variant::NIL` and `Variant::OBJECT`.
 	static String preprocess(const String &p_script_path, const String &p_known_code);
+
+	int get_line_before_to_after(int line_before);
+	int get_line_after_to_before(int line_before);
+	String cached_processed_code;
 
 	CompletionContext get_completion_context() const { return completion_context; }
 	void get_annotation_list(List<MethodInfo> *r_annotations) const;

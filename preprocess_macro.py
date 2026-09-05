@@ -51,7 +51,9 @@ class SnippetData:
         # print("arg_values", arg_values)
         if len(self.param_names) != len(arg_values):
             runner.errors.append(
-                get_traceback_message_formatted("Wrong argument count", arg_values, runner.line_num, 0)
+                get_traceback_message_formatted(
+                    "Wrong argument count", f"got {len(arg_values)}, wanted {len(self.param_names)}", runner.line_num, 0
+                )
             )
             return []
         param_name_to_value = dict(zip(self.param_names, arg_values))
@@ -120,19 +122,26 @@ class MacroRunner:
                 snippet_name = params.pop(0)
                 self.add_to_output(f"# started {snippet_name}")
                 self.line_num += 1
+                snippet_starting_line_num = self.line_num
                 line = lines[self.line_num]
                 snippet_lines = []
-                snippet_starting_line = self.line_num
                 while not line.startswith("@snippet_end") and not line.startswith("@each_end"):
                     snippet_lines.append(line)
                     self.add_to_output(f"# ate part of snippet {snippet_name}")
                     self.line_num += 1
+                    if self.line_num >= len(lines):
+                        self.errors.append(
+                            get_traceback_message_formatted(
+                                "Unterminated snippet", snippet_name, snippet_starting_line_num, 0
+                            )
+                        )
+                        return
                     line = lines[self.line_num]
                 cur_snippet_data = SnippetData(
                     snippet_name,
                     snippet_lines,
                     params,
-                    snippet_starting_line,
+                    snippet_starting_line_num,
                     self.file_name_with_dot_gd,
                     is_an_each_line,
                 )
@@ -236,7 +245,7 @@ if __name__ == "__main__":
             print(data_read)
         if AUTO_GENERATED_MESSAGE in data_read[-len(AUTO_GENERATED_MESSAGE) * 2 :]:
             if IS_IN_DEBUG:
-                print("this was the auto genned output, skipping parsing")
+                print("this was the auto genned output, skipping parsing", file=sys.stderr)
             # do not process the file again, they are looking at the auto genned version
             exit()
         runner = MacroRunner(data_read, args.input_file_path)

@@ -451,12 +451,15 @@ void GDScriptParser::set_last_completion_call_arg(int p_argument) {
 	completion_call_stack.back()->get().argument = p_argument;
 }
 
-int GDScriptParser::get_line_before_to_after(const String &p_processed_code, int line_before_one_indexed) {
-	// TODO: add caching
+int GDScriptParser::get_line_before_to_after(int p_line_before_one_indexed) {
 	// Gets the line number from before processing
 	HashMap<int, int> line_before_to_after;
-	Vector<String> processed_lines = p_processed_code.split("\n");
+	Vector<String> processed_lines = cached_processed_code.split("\n");
 	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
+	bool should_preprocess = ProjectSettings::get_singleton()->get_setting("application/config/should_preprocess");
+	if (!should_preprocess) {
+		return p_line_before_one_indexed;
+	}
 	// const String MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:";
 	// const String MACRO_NAME_AND_DEFINED_DELIMETER = ">";
 
@@ -470,23 +473,53 @@ int GDScriptParser::get_line_before_to_after(const String &p_processed_code, int
 			// }
 		}
 	}
-	return line_before_to_after[line_before_one_indexed];
+	return line_before_to_after[p_line_before_one_indexed];
+}
+
+int GDScriptParser::get_line_after_to_before(int p_line_after_one_indexed) {
+	// Gets the line number from before processing
+	HashMap<int, int> line_after_to_before;
+	Vector<String> processed_lines = cached_processed_code.split("\n");
+	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
+	bool should_preprocess = ProjectSettings::get_singleton()->get_setting("application/config/should_preprocess");
+	if (!should_preprocess) {
+		return p_line_after_one_indexed;
+	}
+	// const String MACRO_DEFINED_AT_COMMENT = "##DEFINED_AT:";
+	// const String MACRO_NAME_AND_DEFINED_DELIMETER = ">";
+
+	for (int i = 0; i < processed_lines.size(); i++) {
+		const String &cur_line = processed_lines[i];
+		int source_comment_pos = cur_line.rfind(SOURCE_LINE_COMMENT);
+		if (source_comment_pos != -1) {
+			int og_line = cur_line.substr(source_comment_pos + SOURCE_LINE_COMMENT.length()).to_int();
+			line_after_to_before[i + 1] = og_line;
+			// if (!line_after_to_before.has(og_line)) {
+			// }
+		}
+	}
+	return line_after_to_before[p_line_after_one_indexed];
 }
 
 String GDScriptParser::preprocess(const String &p_script_path, const String &p_known_code) {
 #ifndef TOOLS_ENABLED
 	return p_known_code;
 #endif
-	// start the preprocessor if it does not exist
-	// if (current_preprocess_dict.is_empty() || !current_preprocess_dict.has("pid") || !OS::get_singleton()->is_process_running(current_preprocess_dict.get("pid", 0))) {
 	const String input_file_path_keyword = "@INPUT_FILE_PATH";
 	const String input_data_as_base64_keyword = "@INPUT_DATA_BASE64";
 	Vector<String> command_parts = ProjectSettings::get_singleton()->get_setting("application/config/preprocess_command_parts");
 	bool should_preprocess = ProjectSettings::get_singleton()->get_setting("application/config/should_preprocess");
 	if (command_parts.is_empty() || !should_preprocess) {
-		// This is handled at the calling site
+		// This is handled at the calling site.
 		return p_known_code;
 	}
+
+	// The processed text is already being viewed, or should not be processed.
+	const String auto_generated_notice = "##THIS WAS AUTO GENERATED";
+	if (p_known_code.contains(auto_generated_notice) || p_known_code.contains("@tool")) {
+		return p_known_code;
+	}
+
 	String first_arg = command_parts.get(0);
 	command_parts.remove_at(0);
 	List<String> args;
@@ -522,7 +555,9 @@ String GDScriptParser::preprocess(const String &p_script_path, const String &p_k
 	}
 
 	// return pipe;
-
+	if (!FileAccess::exists(processed_output_path)) {
+		return p_known_code;
+	}
 	Ref<FileAccess> processed_code_reader = FileAccess::open(processed_output_path, FileAccess::READ);
 	String processed_code = processed_code_reader->get_as_text();
 	// This will be empty when the file doesn't exist.
@@ -532,21 +567,22 @@ String GDScriptParser::preprocess(const String &p_script_path, const String &p_k
 Error GDScriptParser::parse(const String &p_source_code, const String &p_script_path, bool p_for_completion, bool p_parse_body) {
 	clear();
 
-	String processed_source = preprocess(p_script_path, p_source_code);
-	if (processed_source.begins_with("Traceback")) {
-		int line_num_start_pos = processed_source.rfind("(") + 1;
-		int num_digits_in_line = processed_source.rfind(",") - line_num_start_pos;
-		int line_with_error = processed_source.substr(line_num_start_pos, num_digits_in_line).to_int() + 1;
-		int starting_col_with_error = processed_source.substr(processed_source.rfind(",") + 1).to_int() + 1;
+	cached_processed_code = preprocess(p_script_path, p_source_code);
+	if (cached_processed_code.begins_with("Traceback")) {
+		int line_num_start_pos = cached_processed_code.rfind("(") + 1;
+		int num_digits_in_line = cached_processed_code.rfind(",") - line_num_start_pos;
+		int line_with_error = cached_processed_code.substr(line_num_start_pos, num_digits_in_line).to_int() + 1;
+		int starting_col_with_error = cached_processed_code.substr(cached_processed_code.rfind(",") + 1).to_int() + 1;
 		// For now we assume that the macro was not recognized.
 		RegEx in_quotes_regex = RegEx("'(.+?)'");
-		Ref<RegExMatch> result = in_quotes_regex.search(processed_source);
+		Ref<RegExMatch> result = in_quotes_regex.search(cached_processed_code);
 		int ending_col_with_error = starting_col_with_error;
 		if (result.is_valid()) {
 			String unknown_word = result->get_string(1);
 			ending_col_with_error = starting_col_with_error + unknown_word.length();
 		}
-		push_error(processed_source, line_with_error, starting_col_with_error, line_with_error, ending_col_with_error);
+		String no_wrong_error_position = cached_processed_code.substr(0, line_num_start_pos - 1);
+		push_error(no_wrong_error_position, line_with_error, starting_col_with_error, line_with_error, ending_col_with_error);
 	}
 	int cursor_line = -1;
 	int cursor_column = -1;
@@ -579,10 +615,10 @@ Error GDScriptParser::parse(const String &p_source_code, const String &p_script_
 	}
 
 	GDScriptTokenizerText *text_tokenizer = memnew(GDScriptTokenizerText);
-	text_tokenizer->set_source_code(processed_source);
+	text_tokenizer->set_source_code(cached_processed_code);
 
 	tokenizer = text_tokenizer;
-	int line_num_in_processed = get_line_before_to_after(processed_source, cursor_line);
+	int line_num_in_processed = get_line_before_to_after(cursor_line);
 	tokenizer->set_cursor_position(line_num_in_processed, cursor_column);
 
 	script_path = p_script_path.simplify_path();

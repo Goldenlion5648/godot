@@ -172,6 +172,10 @@ static void get_function_names_recursively(const GDScriptParser::ClassNode *p_cl
 }
 
 int GDScriptEditorLanguage::get_line_number_in_original_source(const String &p_source_code_after_preprocess, int p_line_num_in_processed) const {
+	bool should_preprocess = ProjectSettings::get_singleton()->get_setting("application/config/should_preprocess");
+	if (!should_preprocess) {
+		return p_line_num_in_processed;
+	}
 	const String comment_from_macro = "#SOURCE_LINE:";
 	// const String insert_macro_indicator = "!!";
 	const String line_text = p_source_code_after_preprocess.get_slice("\n", p_line_num_in_processed - 1);
@@ -195,8 +199,7 @@ bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_pa
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
-	// TODO: store the processed version as a variable in the parser instance instead of recomputing it.
-	String preprocessed_source_code = GDScriptParser::preprocess(p_path, p_script);
+	String &preprocessed_source_code = parser.cached_processed_code;
 #ifdef DEBUG_ENABLED
 	if (r_warnings) {
 		for (const GDScriptWarning &E : parser.get_warnings()) {
@@ -4366,6 +4369,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 	if (processed == "") {
 		return error_found;
 	}
+	// TODO: allow goto definition on functions
 	HashMap<int, int> line_after_to_line_before;
 	Vector<String> processed_lines = processed.split("\n");
 	const String SOURCE_LINE_COMMENT = "##SOURCE_LINE:";
@@ -4561,7 +4565,7 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 						GDScriptDocGen::doctype_from_gdtype(local.get_datatype(), r_result.doc_type, r_result.enumeration);
 
 						r_result.script_path = base_type.script_path;
-						r_result.location = local.start_line;
+						r_result.location = parser.get_line_after_to_before(local.start_line);
 						return OK;
 					}
 					suite = suite->parent_block;
@@ -4736,9 +4740,11 @@ static Error _lookup_symbol_from_base(const GDScriptParser::DataType &p_base, co
 		}
 	}
 
+	// FIXME this doesn't actually get triggered?
+	// The code is actually in /home/golden/Documents/programming/prs/godot/modules/gdscript/gdscript_editor.cpp:4383
 	// Allow going to snippet definitions.
 	const String SNIPPET_START_INDICATOR_AT_SIGN_ONLY = "@";
-	int i = 0;
+	int i = 1;
 	for (const String &line : p_code.split("\n")) {
 		if (line.begins_with(SNIPPET_START_INDICATOR_AT_SIGN_ONLY) && line.contains(p_symbol)) {
 			r_result.location = i;
