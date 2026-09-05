@@ -490,7 +490,7 @@ String GDScriptParser::preprocess(const String &p_script_path, const String &p_k
 	String first_arg = command_parts.get(0);
 	command_parts.remove_at(0);
 	List<String> args;
-	bool is_using_base64_input = false;
+	// bool is_using_base64_input = false;
 	for (const String &arg : command_parts) {
 		if (arg == input_file_path_keyword) {
 			args.push_back(ProjectSettings::get_singleton()->globalize_path(p_script_path));
@@ -508,7 +508,7 @@ String GDScriptParser::preprocess(const String &p_script_path, const String &p_k
 	// 	OS::get_singleton()->kill(first_inserted["pid"]);
 	// 	running_processes_dict.erase(first_inserted["pid"]);
 	// }
-	Dictionary newest = OS::get_singleton()->execute_with_pipe(first_arg, args, false);
+	OS::get_singleton()->execute_with_pipe(first_arg, args, false);
 	// if (!running_processes_dict.has(p_script_path)) {
 	// 	running_processes_dict[p_script_path] = newest;
 	// // running_processes_dict[newest["pid"]] = newest;
