@@ -152,7 +152,7 @@ class MacroRunner:
                 if snippet_name not in self.snippet_name_to_data:
                     self.errors.append(
                         get_traceback_message_formatted(
-                            "Unknown macro:", snippet_name, self.line_num, pos_for_insert + len(INSERT_SNIPPET_SYMBOL)
+                            "Unknown macro", snippet_name, self.line_num, pos_for_insert + len(INSERT_SNIPPET_SYMBOL)
                         )
                     )
                     self.line_num += 1

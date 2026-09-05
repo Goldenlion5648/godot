@@ -191,11 +191,12 @@ bool GDScriptEditorLanguage::validate(const String &p_script, const String &p_pa
 	GDScriptParser parser;
 	GDScriptAnalyzer analyzer(&parser);
 
-	String preprocessed_source_code = GDScriptParser::preprocess(p_path, p_script);
-	Error err = parser.parse(preprocessed_source_code, p_path, false);
+	Error err = parser.parse(p_script, p_path, false);
 	if (err == OK) {
 		err = analyzer.analyze();
 	}
+	// TODO: store the processed version as a variable in the parser instance instead of recomputing it.
+	String preprocessed_source_code = GDScriptParser::preprocess(p_path, p_script);
 #ifdef DEBUG_ENABLED
 	if (r_warnings) {
 		for (const GDScriptWarning &E : parser.get_warnings()) {
